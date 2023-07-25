@@ -85,8 +85,21 @@
          <property name="title">
           <string>Raspberry Pi Network Endpoint</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="verticalSpacing">
+           <number>-1</number>
+          </property>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="stimDurationSpinBox"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Stim Duration (µs)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
            <widget class="QLineEdit" name="raspberryPiLineEdit">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -96,6 +109,20 @@
             </property>
             <property name="text">
              <string>udp://10.38.0.1:10000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="testStimButton">
+            <property name="text">
+             <string>Test Stim</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="raspberryPiStatusLabel">
+            <property name="text">
+             <string>Status</string>
             </property>
            </widget>
           </item>
