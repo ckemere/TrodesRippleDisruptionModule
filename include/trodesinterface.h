@@ -10,7 +10,8 @@ class TrodesInterface : public QObject
 public:
     enum TrodesNetworkStatus {not_connected, connected, streaming};
 
-    explicit TrodesInterface(QObject *parent = nullptr);
+    // explicit TrodesInterface(QObject *parent = nullptr, std::string server_address, int server_port);
+    TrodesInterface(QObject *parent, std::string server_address, int server_port);
 
     TrodesNetworkStatus getStatus();
 

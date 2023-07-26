@@ -12,10 +12,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
+
+# set up Trodes interface link_directories
+set(TRODES_DIR /home/ckemere/TrodesStuff/trodes-mirror)
+set(TRODES_NETWORK_DIR /home/ckemere/TrodesStuff/trodes-mirror/trodesnetwork)
+link_directories(${TRODES_DIR}/Libraries/Linux/TrodesNetwork/lib)
+
+
 set(PROJECT_SOURCES
     src/main.cpp 
     src/mainwindow.cpp
     src/mainwindow.ui
+    
+    # src/trodes_net_iface.cpp
 
     src/trodesinterface.cpp
 
@@ -32,9 +41,20 @@ qt_add_executable(RippleDisruption
 #    ${PROJECT_SOURCES}
 #)
 
-target_include_directories(RippleDisruption PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(RippleDisruption 
+    PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    SYSTEM PRIVATE ${TRODES_NETWORK_DIR}/include
+    )
 
-target_link_libraries(RippleDisruption PRIVATE Qt6::Widgets)
+target_link_libraries(RippleDisruption 
+    PRIVATE 
+    Qt6::Widgets 
+    trodesnetwork
+    )
+
+target_compile_options(RippleDisruption PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
+# target_compile_options(RippleDisruption PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
 set_target_properties(RippleDisruption PROPERTIES
     ${BUNDLE_ID_OPTION}
