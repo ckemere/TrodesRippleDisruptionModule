@@ -16,7 +16,7 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_checkBox_4_stateChanged(int arg1);
+
 
 private:
     Ui::MainWindow *ui;

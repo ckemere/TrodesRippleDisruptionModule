@@ -17,7 +17,11 @@ set(PROJECT_SOURCES
     src/mainwindow.cpp
     src/mainwindow.ui
 
+    src/trodesinterface.cpp
+
     include/mainwindow.h
+    include/trodesinterface.h
+
 )
 
 qt_add_executable(RippleDisruption
