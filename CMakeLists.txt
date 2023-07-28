@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Xml)
 
 
 # set up Trodes interface link_directories
@@ -24,13 +24,14 @@ set(PROJECT_SOURCES
     src/mainwindow.cpp
     src/mainwindow.ui
     
-    # src/trodes_net_iface.cpp
-
     src/trodesinterface.cpp
 
     include/mainwindow.h
     include/trodesinterface.h
 
+    ${TRODES_DIR}/Trodes/src-main/trodesSocketDefines.h
+    ${TRODES_DIR}/Trodes/src-config/configuration.h
+    ${TRODES_DIR}/Trodes/src-config/configuration.cpp
 )
 
 qt_add_executable(RippleDisruption
@@ -45,14 +46,23 @@ target_include_directories(RippleDisruption
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     SYSTEM PRIVATE ${TRODES_NETWORK_DIR}/include
+    ${TRODES_DIR}
+    ${TRODES_DIR}/Trodes/src-main/
+    ${TRODES_DIR}/Trodes/src-config/
+
     )
 
 target_link_libraries(RippleDisruption 
     PRIVATE 
     Qt6::Widgets 
+    Qt6::Xml
     trodesnetwork
     )
 
+target_compile_definitions(RippleDisruption PRIVATE
+    GIT_COMMIT="${GIT_COMMIT_STRING}" # needed for stuff included in in configuration reading
+    # TRODES_CODE
+)
 target_compile_options(RippleDisruption PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
 # target_compile_options(RippleDisruption PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 

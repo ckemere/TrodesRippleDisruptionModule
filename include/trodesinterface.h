@@ -2,6 +2,7 @@
 #define TRODESINTERFACE_H
 
 #include <QObject>
+#include <string>
 
 class TrodesInterface : public QObject
 {
@@ -13,16 +14,21 @@ public:
     // explicit TrodesInterface(QObject *parent = nullptr, std::string server_address, int server_port);
     TrodesInterface(QObject *parent, std::string server_address, int server_port);
 
-    TrodesNetworkStatus getStatus();
-
-
 public slots:
+    void updateParameters();
+    void updateNetworkStatus();
+    void run(void);
 
 signals:
-    void trodesNetworkStatusUpdate(TrodesNetworkStatus newStatus);
+    void networkStatus(TrodesNetworkStatus newStatus);
+    void parametersUpdated(void);
+    void finished();
+    void error(QString err);
 
 private:
     TrodesNetworkStatus currentNetworkStatus;
+    std::string server_address;
+    int server_port;
 
 };
 

@@ -25,25 +25,25 @@
   
 <!-- Spike configuration (NTrode setup)-->
   <SpikeConfiguration>
-    <SpikeNTrode id="1" color="#FF0303" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0" >
+    <SpikeNTrode id="4" color="#FF0303" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0" >
       <SpikeChannel thresh="30" maxDisp="200" hwChan="0"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="1"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="2"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="3"/>
     </SpikeNTrode>
-    <SpikeNTrode id="2" color="#00FF00" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
+    <SpikeNTrode id="3" color="#00FF00" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
       <SpikeChannel thresh="30" maxDisp="200" hwChan="4"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="5"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="6"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="7"/>
     </SpikeNTrode>
-    <SpikeNTrode id="3" color="#0303FF" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
+    <SpikeNTrode id="2" color="#0303FF" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
       <SpikeChannel thresh="30" maxDisp="200" hwChan="8"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="9"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="10"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="11"/>
     </SpikeNTrode>
-    <SpikeNTrode id="4" color="#DAA520" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
+    <SpikeNTrode id="1" color="#DAA520" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0">
       <SpikeChannel thresh="30" maxDisp="200" hwChan="12"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="13"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="14"/>
