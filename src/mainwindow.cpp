@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QThread>
+#include <QColor>
 
 MainWindow::MainWindow(QWidget *parent, QStringList arguments)
     : QMainWindow(parent)
@@ -43,8 +44,23 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
     ui->tableWidget->setRowCount(parsedConfiguration.spikeConf.ntrodes.length());
     for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
-        ui->tableWidget->setItem(i, 0, 
-        new QTableWidgetItem(QString::number(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId)));
+        QTableWidgetItem *nTrodeIdItem = new QTableWidgetItem(QString::number(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId));
+        // nTrodeIdItem->setFlags(nTrodeIdItem->flags() & ~Qt::ItemIsEditable);
+        nTrodeIdItem->setFlags(Qt::ItemIsEnabled);
+        nTrodeIdItems.append(nTrodeIdItem);
+        ui->tableWidget->setItem(i, 0, nTrodeIdItem);
+
+        QTableWidgetItem *meanItem = new QTableWidgetItem("");
+        meanItem->setFlags(Qt::ItemIsEnabled);
+        // meanItem->setFlags(meanItem->flags() & ~Qt::ItemIsEditable);
+        meanPowerItems.append(meanItem);
+        ui->tableWidget->setItem(i, 1, meanItem);
+
+        QTableWidgetItem *stdPowerItem = new QTableWidgetItem("");
+        stdPowerItem->setFlags(Qt::ItemIsEnabled);
+        // stdPowerItem->setFlags(stdPowerItem->flags() & ~Qt::ItemIsEditable);
+        stdPowerItems.append(nTrodeIdItem);
+        ui->tableWidget->setItem(i, 2, stdPowerItem);
     }
 
 
@@ -61,6 +77,22 @@ void MainWindow::on_updateParametersButton_clicked()
     qDebug() << "Update parameters clicked! From thread " << QThread::currentThreadId();
     ui->updateParametersButton->setEnabled(false);
     emit updateParametersButton_clicked();
+}
+
+void MainWindow::on_tableWidget_cellClicked(int row, int column)
+{
+    qDebug() << "Clicked a cell!";
+    if (column == 0) { // force click of ID cell
+        if (rippleNTrodeIndices.contains(row)) {
+            // unhighlight!
+            nTrodeIdItems[row]->setBackground(Qt::NoBrush);
+            rippleNTrodeIndices.removeOne(row);
+        }
+        else {
+            nTrodeIdItems[row]->setBackground(QColor(0x95, 0xd0, 0xfc)); // XKCD light blue from https://xkcd.com/color/rgb
+            rippleNTrodeIndices.append(row);
+        }
+    }
 }
 
 void MainWindow::reflectParametersUpdated()

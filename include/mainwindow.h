@@ -7,6 +7,8 @@
 
 #include <QMainWindow>
 #include <QString>
+#include <QList>
+#include <QTableWidgetItem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -32,10 +34,19 @@ public slots:
 
 private slots:
     void on_updateParametersButton_clicked();
+    void on_tableWidget_cellClicked(int row, int column);
     void reflectParametersUpdated();
-
 
 private:
     Ui::MainWindow *ui;
+    int numNTrodes;
+    QList<int> rippleNTrodeIndices;
+    QList<int> noiseNTrodeIndices;
+
+    QList<QTableWidgetItem *> nTrodeIdItems;
+    QList<QTableWidgetItem *> meanPowerItems;
+    QList<QTableWidgetItem *> stdPowerItems;
+
+
 };
 #endif // MAINWINDOW_H
