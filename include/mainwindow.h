@@ -14,6 +14,27 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+class TableRow
+{
+public:
+    TableRow(QString idStr = "", QString meanStr = "", QString stdStr = "", int id_index = 0);
+    ~TableRow();
+
+public:
+    void setTableRow(QTableWidget *table, int row);
+    void highlight(bool highlight = true);
+
+    int id_val;
+    double mean_val;
+    double std_val;
+    int id_index;
+
+private:
+    QTableWidgetItem *id;
+    QTableWidgetItem *mean;
+    QTableWidgetItem *std;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -22,31 +43,35 @@ public:
     MainWindow(QWidget *parent = nullptr, QStringList arguments = QStringList());
     ~MainWindow();
 
-    void parseConfigurationFile(QString);
+
+    void redrawNTrodeTable(QList<int> order = QList<int>());
 
     QString server_address = "127.0.0.1";
     int server_port = 10000;
 
 signals:
     void updateParametersButton_clicked();
+
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);
 
 private slots:
     void on_updateParametersButton_clicked();
     void on_tableWidget_cellClicked(int row, int column);
+    void on_freezeSelectionButton_clicked();
     void reflectParametersUpdated();
 
 private:
     Ui::MainWindow *ui;
-    int numNTrodes;
-    QList<int> rippleNTrodeIndices;
-    QList<int> noiseNTrodeIndices;
+    // int numNTrodes;
+    QList<int> nTrodeIds; // loaded from config file
+    bool nTrodeTableFrozen = false;
 
-    QList<QTableWidgetItem *> nTrodeIdItems;
-    QList<QTableWidgetItem *> meanPowerItems;
-    QList<QTableWidgetItem *> stdPowerItems;
+    QList<int> rippleNTrodeIndices; // indices into nTrodeIds
+    QList<int> noiseNTrodeIndices; // indices into nTrodeIds
 
+
+    QList<TableRow*> nTrodeTableRows; // For display
 
 };
 #endif // MAINWINDOW_H

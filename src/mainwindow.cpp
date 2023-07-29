@@ -4,6 +4,39 @@
 #include <QString>
 #include <QThread>
 #include <QColor>
+#include <QMessageBox>
+
+TableRow::TableRow(QString idStr, QString meanStr, QString stdStr, int id_index)
+: id(new QTableWidgetItem(idStr)), mean(new QTableWidgetItem(meanStr)), std(new QTableWidgetItem(stdStr)), id_index(id_index)
+{
+    id->setFlags(Qt::ItemIsEnabled);
+    mean->setFlags(Qt::ItemIsEnabled);
+    std->setFlags(Qt::ItemIsEnabled);
+
+    id->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+}
+
+TableRow::~TableRow()
+{
+    delete id; delete mean; delete std;
+}
+
+void TableRow::setTableRow(QTableWidget *table, int row)
+{
+    table->setItem(row, 0, id);
+    table->setItem(row, 1, mean);
+    table->setItem(row, 2, std);
+}
+
+void TableRow::highlight(bool highlight)
+{
+    if (highlight) {
+        id->setBackground(QColor(0x95, 0xd0, 0xfc)); // XKCD light blue from https://xkcd.com/color/rgb
+    }
+    else {
+        id->setBackground(Qt::NoBrush);
+    }
+}
 
 MainWindow::MainWindow(QWidget *parent, QStringList arguments)
     : QMainWindow(parent)
@@ -42,27 +75,13 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
         qDebug() << "ID " << i << "is " << parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId;
     }
 
-    ui->tableWidget->setRowCount(parsedConfiguration.spikeConf.ntrodes.length());
     for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
-        QTableWidgetItem *nTrodeIdItem = new QTableWidgetItem(QString::number(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId));
-        // nTrodeIdItem->setFlags(nTrodeIdItem->flags() & ~Qt::ItemIsEditable);
-        nTrodeIdItem->setFlags(Qt::ItemIsEnabled);
-        nTrodeIdItems.append(nTrodeIdItem);
-        ui->tableWidget->setItem(i, 0, nTrodeIdItem);
-
-        QTableWidgetItem *meanItem = new QTableWidgetItem("");
-        meanItem->setFlags(Qt::ItemIsEnabled);
-        // meanItem->setFlags(meanItem->flags() & ~Qt::ItemIsEditable);
-        meanPowerItems.append(meanItem);
-        ui->tableWidget->setItem(i, 1, meanItem);
-
-        QTableWidgetItem *stdPowerItem = new QTableWidgetItem("");
-        stdPowerItem->setFlags(Qt::ItemIsEnabled);
-        // stdPowerItem->setFlags(stdPowerItem->flags() & ~Qt::ItemIsEditable);
-        stdPowerItems.append(nTrodeIdItem);
-        ui->tableWidget->setItem(i, 2, stdPowerItem);
+        nTrodeIds.append(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId);
     }
 
+    redrawNTrodeTable();
+
+    ui->tableWidget->horizontalHeaderItem(0)->setText("NTrode\nId");
 
     ui->statusbar->showMessage("Establishing Trodes interface.");
 }
@@ -77,22 +96,6 @@ void MainWindow::on_updateParametersButton_clicked()
     qDebug() << "Update parameters clicked! From thread " << QThread::currentThreadId();
     ui->updateParametersButton->setEnabled(false);
     emit updateParametersButton_clicked();
-}
-
-void MainWindow::on_tableWidget_cellClicked(int row, int column)
-{
-    qDebug() << "Clicked a cell!";
-    if (column == 0) { // force click of ID cell
-        if (rippleNTrodeIndices.contains(row)) {
-            // unhighlight!
-            nTrodeIdItems[row]->setBackground(Qt::NoBrush);
-            rippleNTrodeIndices.removeOne(row);
-        }
-        else {
-            nTrodeIdItems[row]->setBackground(QColor(0x95, 0xd0, 0xfc)); // XKCD light blue from https://xkcd.com/color/rgb
-            rippleNTrodeIndices.append(row);
-        }
-    }
 }
 
 void MainWindow::reflectParametersUpdated()
@@ -113,5 +116,91 @@ void MainWindow::networkStatusUpdate(TrodesInterface::TrodesNetworkStatus status
         case TrodesInterface::TrodesNetworkStatus::streaming:
             ui->statusbar->showMessage("Streaming data.");
             break;
+    }
+}
+
+
+/* Code related to the NTrode Selection Process*/
+
+void MainWindow::redrawNTrodeTable(QList<int> order)
+{
+    if (ui->tableWidget->rowCount() != nTrodeIds.count()) 
+        ui->tableWidget->setRowCount(nTrodeIds.count());
+
+
+    // Delete old rows to avoid a memory leak
+    for (int i=0; i < nTrodeTableRows.count(); i++)
+        delete nTrodeTableRows[i];
+    nTrodeTableRows.clear();
+
+    if (order.isEmpty()) // Default order is natural
+        for (int i=0; i < nTrodeIds.length(); i++)
+            order.append(i);
+
+    for (int i=0; i < order.length(); i++) {
+        int idx = order[i];
+        TableRow *row = new TableRow(QString::number(nTrodeIds[idx]), "", "", idx);
+        nTrodeTableRows.append(row);
+        row->setTableRow(ui->tableWidget, i);
+        // Colorize table
+        if (rippleNTrodeIndices.contains(idx))
+            row->highlight(true);
+        else
+            row->highlight(false);
+    }
+}
+
+void MainWindow::on_tableWidget_cellClicked(int row, int column)
+{
+    qDebug() << "Clicked a cell!";
+    int nTrodeId_index = nTrodeTableRows[row]->id_index;
+    if (column == 0) { // force click of ID cell
+        if (rippleNTrodeIndices.contains(nTrodeId_index)) {
+            // unhighlight!
+            nTrodeTableRows[row]->highlight(false);
+            rippleNTrodeIndices.removeOne(nTrodeId_index);
+        }
+        else {
+            nTrodeTableRows[row]->highlight(true);
+            rippleNTrodeIndices.append(nTrodeId_index);
+        }
+    }
+}
+
+void MainWindow::on_freezeSelectionButton_clicked()
+{
+    if (nTrodeTableFrozen) {
+        QList<int> raw_order;
+        for (int i = 0; i < nTrodeIds.length(); i++)
+            raw_order.append(i);
+        
+        redrawNTrodeTable(raw_order);
+
+        ui->freezeSelectionButton->setText("Freeze Selection");
+        nTrodeTableFrozen = false;
+    }
+    else {
+        if (rippleNTrodeIndices.isEmpty()) {
+            QMessageBox msgBox(QMessageBox::Warning, "No electrodes chosen", 
+                "No electrodes have been selected for real time processing.",
+                QMessageBox::Ok);
+            msgBox.exec();
+        }
+        else {
+            // Push selected channels to the top
+            QList<int> new_order;
+            new_order.append(rippleNTrodeIndices);
+
+            // Get unselected channels
+            for (int i = 0; i < nTrodeIds.length(); i++) {
+                if (!new_order.contains(i))
+                new_order.append(i);
+            }
+
+            redrawNTrodeTable(new_order);
+
+            ui->freezeSelectionButton->setText("Unfreeze Selection");
+            nTrodeTableFrozen = true;
+        }
     }
 }
