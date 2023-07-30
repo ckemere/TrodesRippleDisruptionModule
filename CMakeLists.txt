@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
-find_package(Qt6 REQUIRED COMPONENTS Widgets Xml)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Xml Network)
 
 
 # set up Trodes interface link_directories
@@ -25,9 +25,11 @@ set(PROJECT_SOURCES
     src/mainwindow.ui
     
     src/trodesinterface.cpp
+    src/stiminterface.cpp
 
     include/mainwindow.h
     include/trodesinterface.h
+    include/stiminterface.h
 
     ${TRODES_DIR}/Trodes/src-main/trodesSocketDefines.h
     ${TRODES_DIR}/Trodes/src-config/configuration.h
@@ -56,6 +58,7 @@ target_link_libraries(RippleDisruption
     PRIVATE 
     Qt6::Widgets 
     Qt6::Xml
+    Qt6::Network
     trodesnetwork
     )
 

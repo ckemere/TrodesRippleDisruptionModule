@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "trodesinterface.h"
+#include "stiminterface.h"
 #include "Trodes/src-config/configuration.h"
 
 
@@ -35,6 +36,24 @@ private:
     QTableWidgetItem *std;
 };
 
+struct RippleParameters
+{
+    double rippleThreshold; // in std devs over mean
+    int numberOfChannels; // voting requirement
+
+    vector whichChannels; // need to figure out
+
+    double noiseThreshold;
+    int noiseNumberOfChannels;
+    vector noiseChannels;
+}
+
+struct RippleData
+{
+    vector means;
+    vector stds;
+}
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -51,15 +70,20 @@ public:
 
 signals:
     void updateParametersButton_clicked();
+    void updatedStimServerUrl(QString, quint16);
+    void testStimulation();
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);
+    void stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus);
 
 private slots:
     void on_updateParametersButton_clicked();
     void on_tableWidget_cellClicked(int row, int column);
     void on_freezeSelectionButton_clicked();
     void reflectParametersUpdated();
+    void on_raspberryPiLineEdit_editingFinished();
+    void on_testStimButton_clicked();
 
 private:
     Ui::MainWindow *ui;

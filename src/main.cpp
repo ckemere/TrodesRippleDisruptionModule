@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "trodesinterface.h"
+#include "stiminterface.h"
 #include <QApplication>
 #include <QThread>
 #include <QTimer>
@@ -11,41 +12,6 @@
 int main(int argc, char *argv[])
 {
 
-    // std::string server_address = "tcp://127.0.0.1";
-    // int server_port = 10000;
-    // std::string config_filename;
-
-    // std::vector<std::string> all_args;
-
-    // if (argc > 1) {
-    //     all_args.assign(argv + 1, argv + argc);
-    //     std::vector<std::string>::iterator iter = all_args.begin();
-
-    //     while (iter != all_args.end()) {
-    //         if ((iter->compare("-serverAddress")==0) && (iter != all_args.end())) {
-    //             iter++;
-    //             server_address = *iter;
-    //         } else if ((iter->compare("-serverPort")==0) && (iter != all_args.end())) {
-    //             iter++;
-    //             auto server_port_str = *iter;
-    //             try {
-    //                 server_port = std::stoi(server_port_str);
-                    
-    //             }
-    //             catch (std::invalid_argument const& ex)
-    //             {
-    //                 std::cerr << "Invalid server port number." << std::endl;
-    //             }
-
-    //         } else if ((iter->compare("-trodesConfig")==0) && (iter != all_args.end())) {
-    //             iter++;
-    //             config_filename = *iter;
-    //         }
-    //         // else if ((arguments.at(optionInd).compare("-trodesConfig",Qt::CaseInsensitive)==0) && (arguments.length() > optionInd+1)) {
-    //         iter++;
-    //     }
-        
-    // }
 
     QApplication a(argc, argv);
     MainWindow w(nullptr, a.arguments());
@@ -70,8 +36,24 @@ int main(int argc, char *argv[])
     QTimer statusUpdateTimer;
     QObject::connect(&statusUpdateTimer, SIGNAL(timeout()), &trodesInterface, SLOT(updateNetworkStatus()));
     statusUpdateTimer.start(250);
-
     interface_thread->start();
+
+
+    StimInterface stimInterface(nullptr);
+    QThread* stim_thread = new QThread;
+    stimInterface.moveToThread(stim_thread);
+    // connect(trodesInterface, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
+    QObject::connect(stim_thread, SIGNAL(started()), &stimInterface, SLOT(run()));
+    QObject::connect(&stimInterface, SIGNAL(finished()), stim_thread, SLOT(quit()));
+    QObject::connect(&stimInterface, SIGNAL(finished()), &stimInterface, SLOT(deleteLater()));
+    QObject::connect(stim_thread, SIGNAL(finished()), stim_thread, SLOT(deleteLater()));
+
+    // QObject::connect(&w, SIGNAL(updateParametersButton_clicked()), &stimInterface, SLOT(updateParameters()));
+    QObject::connect(&stimInterface, &StimInterface::stimStatusUpdate, &w, &MainWindow::stimServerStatusUpdate);
+    QObject::connect(&w, &MainWindow::updatedStimServerUrl, &stimInterface, &StimInterface::updateAddress);
+    QObject::connect(&w, &MainWindow::testStimulation, &stimInterface, &StimInterface::testStimulation);
+    stim_thread->start();
+
 
     return a.exec();
 }

@@ -5,9 +5,11 @@
 #include <QThread>
 #include <QColor>
 #include <QMessageBox>
+#include <QUrl>
+#include <QPalette>
 
 TableRow::TableRow(QString idStr, QString meanStr, QString stdStr, int id_index)
-: id(new QTableWidgetItem(idStr)), mean(new QTableWidgetItem(meanStr)), std(new QTableWidgetItem(stdStr)), id_index(id_index)
+: id_index(id_index), id(new QTableWidgetItem(idStr)), mean(new QTableWidgetItem(meanStr)), std(new QTableWidgetItem(stdStr))
 {
     id->setFlags(Qt::ItemIsEnabled);
     mean->setFlags(Qt::ItemIsEnabled);
@@ -69,11 +71,7 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
     TrodesConfiguration parsedConfiguration;
     QString errors = parsedConfiguration.readTrodesConfig(config_filename);
-    qDebug() << "Read config with errors: " << errors;
-    qDebug() << "Length of spikeConf" << parsedConfiguration.spikeConf.ntrodes.length();
-    for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
-        qDebug() << "ID " << i << "is " << parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId;
-    }
+    qDebug() << "[RippleDisruption] Read config. Errors? " << errors;
 
     for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
         nTrodeIds.append(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId);
@@ -84,6 +82,7 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
     ui->tableWidget->horizontalHeaderItem(0)->setText("NTrode\nId");
 
     ui->statusbar->showMessage("Establishing Trodes interface.");
+    on_raspberryPiLineEdit_editingFinished(); // updates trodes interface status
 }
 
 MainWindow::~MainWindow()
@@ -117,6 +116,73 @@ void MainWindow::networkStatusUpdate(TrodesInterface::TrodesNetworkStatus status
             ui->statusbar->showMessage("Streaming data.");
             break;
     }
+}
+
+/* Code related to stimulation server */
+
+void MainWindow::on_raspberryPiLineEdit_editingFinished() {
+    QString url_string = ui->raspberryPiLineEdit->text();
+    QUrl url = QUrl(url_string, QUrl::StrictMode);
+
+    // Accomodate something like "raspilocal:20782"
+    if ((!url.scheme().isEmpty()) && (url.host().isEmpty()))
+        url = QUrl("udp://"+url_string, QUrl::StrictMode);
+
+    // Accomodate things without the schmee like 10.38.0.1:20782
+    if (!url.isValid()) { // Could be missing the pre-pended "udp://""
+        url = QUrl("udp://"+url_string, QUrl::StrictMode); 
+    }
+
+    // Make sure there's a port and the scheme is 'udp' (don't let people do something else though it doesn't matter)
+    if ((url.isValid()) && (url.port() > 0) && (url.scheme() == "udp")) {
+        stimServerStatusUpdate(StimInterface::StimIFaceStatus::trying_to_connect);
+        emit updatedStimServerUrl(url.host(), url.port());
+    }
+    else {
+        stimServerStatusUpdate(StimInterface::StimIFaceStatus::invalid_url);
+        emit updatedStimServerUrl("", 0); // 0 is the flag for invalid
+    }
+}
+
+void MainWindow::stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus) {
+    QPalette palette = ui->raspberryPiLineEdit->palette();
+    palette.setColor(QPalette::Base, Qt::white);
+
+    switch (newStatus) {
+        // case StimInterface::StimIFaceStatus::unintialized:
+        // {
+        //     ui->raspberryPiStatusLabel->setText("Uninitialized.");
+        //     ui->testStimButton->setEnabled(false);
+        //     break;
+        // }
+        case StimInterface::StimIFaceStatus::trying_to_connect:
+        {
+            ui->raspberryPiStatusLabel->setText("Not connected.");
+            ui->testStimButton->setEnabled(false);
+            break;
+        }
+        case StimInterface::StimIFaceStatus::connected:
+        {
+            palette.setColor(QPalette::Base, QColor(0x96, 0xf9, 0x7b)); // XKCD light-green
+            ui->raspberryPiStatusLabel->setText("Connected.");
+            ui->testStimButton->setEnabled(true);
+            break;
+        }
+        case StimInterface::StimIFaceStatus::invalid_url:
+        {
+            palette.setColor(QPalette::Base, QColor(0xff, 0xd1, 0xdf)); // XKCD light-pink
+            ui->raspberryPiStatusLabel->setText("Invalid URL.");
+            ui->testStimButton->setEnabled(false);
+            break;
+        }
+
+    }
+    ui->raspberryPiLineEdit->setPalette(palette);
+}
+
+void MainWindow::on_testStimButton_clicked()
+{
+    emit testStimulation();
 }
 
 
