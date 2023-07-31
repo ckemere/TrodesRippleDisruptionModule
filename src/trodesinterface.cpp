@@ -42,33 +42,9 @@ std::atomic<double> postDetectionDelay;
 void network_processing_loop (std::string server_address, int server_port) {
 
     std::thread trodes_network([ address = server_address, port = server_port]() {
-        trodes::network::Connection c(address, port);
-
-        std::cerr << "[trodes network] thread starting!" << std::endl;
-
-        std::string source_pub_endpoint;
-        std::string acq_pub_endpoint;
-        std::string lfp_pub_endpoint;
-
-        while ((source_pub_endpoint = c.get_endpoint("trodes.source.pub")) == "") {
-            std::cerr << "[source pub] Endpoint `trodes.source.pub` is not available on the network yet. Retrying in 500ms..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-
-        ZmqSourceSubscriber<trodes::network::SourceStatus> sstatus(source_pub_endpoint);
-
-        while ((acq_pub_endpoint = c.get_endpoint("trodes.acquisition")) == "") {
-            std::cerr << "[source pub] Endpoint `trodes.acquisition` is not available on the network yet. Retrying in 500ms..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-
-        ZmqSourceSubscriber<trodes::network::AcquisitionCommand> acq(acq_pub_endpoint);
-
-        trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::connected;
-
         // Want to wait for a [trodes.source.pub]connect and a [trodes.acquisition]play
 
-
+/*
         while ((lfp_pub_endpoint = c.get_endpoint("source.lfp")) == "") {
             std::cerr << "[source pub] Endpoint `source.lfp` is not available on the network yet. Retrying in 500ms..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -80,13 +56,18 @@ void network_processing_loop (std::string server_address, int server_port) {
         // Only valid until a [trodes.acquisition]stop. Stop is always generated with another [trodes.source.pub]connect if that's useful
 
         std::stringstream result;
+        */
 
-        while (true) {
-            auto recvd = sstatus.receive();
-            std::cerr << "[trodes.source.pub]" << recvd.message;
-            result.str({});
-            result.clear();
-        }
+        // while (true) {
+        //     auto recvd = sstatus.receive();
+        //     std::cerr << "[trodes.source.pub]" << recvd.message;
+        //     result.str({});
+        //     result.clear();
+        // }
+
+
+
+
             //     while (true) {
     //         auto recvd = sstatus.receive();
     //         std::cerr << "[trodes.source.pub]" << recvd.message;
@@ -136,6 +117,40 @@ TrodesInterface::TrodesInterface(QObject *parent = nullptr, std::string server_a
 
 void TrodesInterface::run()
 {
+    c = new trodes::network::Connection(server_address, server_port);
+
+    std::cerr << "[trodes network] thread starting!" << std::endl;
+
+    std::string source_pub_endpoint;
+    std::string acq_pub_endpoint;
+    std::string lfp_pub_endpoint;
+
+    while ((source_pub_endpoint = c->get_endpoint("trodes.source.pub")) == "") {
+        std::cerr << "[source pub] Endpoint `trodes.source.pub` is not available on the network yet. Retrying in 500ms..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    sstatus = new ZmqSourceSubscriber<trodes::network::SourceStatus>(source_pub_endpoint);
+    // int fd;
+    // size_t sizeof_fd = sizeof(fd);
+    // if(zmq_getsockopt(sstatus->socket_, ZMQ_FD, &fd, &sizeof_fd))
+    //     std::cerr << "Error retrieving sstatus zmq fd";
+    sstatus_notifier = new QSocketNotifier(sstatus->socket_.get(zmq::sockopt::fd), QSocketNotifier::Read, this); // Setup a socket notifier for the source status channel
+    connect(sstatus_notifier, SIGNAL(activated(QSocketDescriptor, QSocketNotifier::Type)), this, SLOT(sstatus_activity()));
+
+    while ((acq_pub_endpoint = c->get_endpoint("trodes.acquisition")) == "") {
+        std::cerr << "[source pub] Endpoint `trodes.acquisition` is not available on the network yet. Retrying in 500ms..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    acq = new ZmqSourceSubscriber<trodes::network::AcquisitionCommand>(acq_pub_endpoint);
+    //  if(zmq_getsockopt(acq->socket_, ZMQ_FD, &fd, &sizeof_fd))
+    //     std::cerr << "Error retrieving sstatus zmq fd";
+    acq_notifier = new QSocketNotifier(acq->socket_.get(zmq::sockopt::fd), QSocketNotifier::Read, this); // Setup a socket notifier for the acquisition commands channel
+    connect(acq_notifier, SIGNAL(activated(QSocketDescriptor, QSocketNotifier::Type)), this, SLOT(acq_activity()));
+
+    trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::connected;
+
     network_processing_loop(server_address, server_port);
 
 
@@ -144,6 +159,59 @@ void TrodesInterface::run()
     
     // emit finished();
 }
+
+void TrodesInterface::sstatus_activity()
+{
+    auto flags = sstatus->socket_.get(zmq::sockopt::events);
+    if(flags & ZMQ_POLLIN) {
+        bool done = false;
+        while (!done) {
+            zmq::message_t message;
+            auto rv = sstatus->socket_.recv(message, zmq::recv_flags::dontwait);
+            if (!rv.has_value()) {
+                done = true;
+            }
+            else {
+                auto msg = trodes::network::util::unpack<trodes::network::SourceStatus>(message.to_string());
+                qDebug() << "[In TrodesInterface] Got a status message" << QString::fromStdString(msg.message);
+                // probably emit something here
+            }
+        }
+
+    }
+    // if(flags & ZMQ_POLLOUT) {
+    //     emit readyWrite();
+    // }
+}
+
+void TrodesInterface::acq_activity()
+{
+    // uint32_t flags;
+    // size_t size = sizeof(flags);
+    //  CPPZMQ just asserts this
+    // if(!acq->socket_.get(zmq::sockopt::ZMQ_EVENTS, &flags, &size)) {
+    //     qWarning("Error reading ZMQ_EVENTS in ZMQSocket::sstatus_activity");
+    //     return;
+    // }
+    auto flags = acq->socket_.get(zmq::sockopt::events);
+
+    if(flags & ZMQ_POLLIN) {
+        bool done = false;
+        while (!done) {
+            zmq::message_t message;
+            auto rv = acq->socket_.recv(message, zmq::recv_flags::dontwait);
+            if (!rv.has_value()) {
+                done = true;
+            }
+            else {
+                auto msg = trodes::network::util::unpack<trodes::network::AcquisitionCommand>(message.to_string());
+                qDebug() << "[In TrodesInterface] Got an acq message" << QString::fromStdString(msg.command);
+                // probably emit something here
+            }
+        }
+    }
+}
+
 
 void TrodesInterface::updateParameters()
 {

@@ -3,7 +3,7 @@
 <Configuration>
   
 <!--Global options  -->  
-  <GlobalOptions numChannels="64" filePath="/Users/karlssonm/datadump" filePrefix="test" samplingRate="30000"/>
+  <GlobalOptions numChannels="32" filePath="/Users/karlssonm/datadump" filePrefix="test" samplingRate="30000"/>
 
   <NetworkConfiguration trodesHost="127.0.0.1" trodesPort="10000" />
 
@@ -73,7 +73,7 @@
       <SpikeChannel thresh="30" maxDisp="200" hwChan="30"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="31"/>
     </SpikeNTrode>
-    <SpikeNTrode id="9" color="#FF0303" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0" >
+    <!-- <SpikeNTrode id="9" color="#FF0303" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpOn="0" >
       <SpikeChannel thresh="30" maxDisp="200" hwChan="32"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="33"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="34"/>
@@ -120,7 +120,7 @@
       <SpikeChannel thresh="30" maxDisp="200" hwChan="61"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="62"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="63"/>
-    </SpikeNTrode>
+    </SpikeNTrode> -->
   </SpikeConfiguration>
 
 

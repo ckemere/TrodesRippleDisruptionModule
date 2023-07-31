@@ -36,23 +36,23 @@ private:
     QTableWidgetItem *std;
 };
 
-struct RippleParameters
-{
-    double rippleThreshold; // in std devs over mean
-    int numberOfChannels; // voting requirement
+// struct RippleParameters
+// {
+//     double rippleThreshold; // in std devs over mean
+//     int numberOfChannels; // voting requirement
 
-    vector whichChannels; // need to figure out
+//     vector whichChannels; // need to figure out
 
-    double noiseThreshold;
-    int noiseNumberOfChannels;
-    vector noiseChannels;
-}
+//     double noiseThreshold;
+//     int noiseNumberOfChannels;
+//     vector noiseChannels;
+// }
 
-struct RippleData
-{
-    vector means;
-    vector stds;
-}
+// struct RippleData
+// {
+//     vector means;
+//     vector stds;
+// }
 
 class MainWindow : public QMainWindow
 {
