@@ -14,8 +14,8 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Xml Network)
 
 
 # set up Trodes interface link_directories
-set(TRODES_DIR /home/ckemere/TrodesStuff/trodes-mirror)
-set(TRODES_NETWORK_DIR /home/ckemere/TrodesStuff/trodes-mirror/trodesnetwork)
+set(TRODES_DIR /home/kemerelab/Code/Trodes)
+set(TRODES_NETWORK_DIR /home/kemerelab/Code/Trodes/trodesnetwork)
 link_directories(${TRODES_DIR}/Libraries/Linux/TrodesNetwork/lib)
 
 
@@ -50,11 +50,13 @@ qt_add_executable(RippleDisruption
 target_include_directories(RippleDisruption 
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
-    SYSTEM PRIVATE ${TRODES_NETWORK_DIR}/include
+    ${TRODES_NETWORK_DIR}/include
     ${TRODES_DIR}
     ${TRODES_DIR}/Trodes/src-main/
     ${TRODES_DIR}/Trodes/src-config/
-
+    ${TRODES_DIR}/extern/msgpack-c/include
+    ${TRODES_DIR}/extern/cppzmq
+    ${TRODES_DIR}/extern/zmq/include
     )
 
 target_link_libraries(RippleDisruption 
