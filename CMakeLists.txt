@@ -27,9 +27,12 @@ set(PROJECT_SOURCES
     src/trodesinterface.cpp
     src/stiminterface.cpp
 
+    src/ripplepower.cpp
+
     include/mainwindow.h
     include/trodesinterface.h
     include/stiminterface.h
+    include/ripplepower.h
 
     ${TRODES_DIR}/Trodes/src-main/trodesSocketDefines.h
     ${TRODES_DIR}/Trodes/src-config/configuration.h

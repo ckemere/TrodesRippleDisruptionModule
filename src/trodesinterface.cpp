@@ -1,5 +1,6 @@
 #include "trodesinterface.h"
 
+#include "ripplepower.h"
 
 #include <TrodesNetwork/Connection.h>
 #include <TrodesNetwork/Generated/AcquisitionCommand.h>
@@ -24,7 +25,7 @@
 // Global variables for communicating between TrodesNet thread and QT
 std::atomic<TrodesInterface::TrodesNetworkStatus> trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::not_connected;
 
-// Parameters
+// Parameters that might be dynamic
 std::atomic<double> rippleThreshold;
 std::atomic<int>    numActiveChannels;
 std::atomic<double> postDetectionDelay;
@@ -32,38 +33,34 @@ std::atomic<double> postDetectionDelay;
 // void network_processing_loop (std::string server_address, int server_port) {
         // std::thread trodes_network([ address = server_address, port = server_port]() {
 
-void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_endpoint, std::string server_address, int server_port) {
+void network_processing_loop (std::thread *trodes_network, 
+                              std::string lfp_pub_endpoint, 
+                              std::vector<int> ripple_channels) {
 
-    trodes_network = new std::thread([endpoint = lfp_pub_endpoint, server_address = server_address, server_port = server_port]() {
+    trodes_network = new std::thread([endpoint = lfp_pub_endpoint, ripple_channels = ripple_channels]() {
+        std::cerr << "Ripple channels size: " << ripple_channels.size() << std::endl;
+
+        RipplePower ripple_power(ripple_channels);
         std::cerr << "Trodes lfp thread starting";
-        trodes::network::Connection con(server_address, server_port);
 
-        std::string lfp_pub_endpoint_thread_local;
-        while ((lfp_pub_endpoint_thread_local = con.get_endpoint("source.lfp")) == "") {
-            std::cerr << "[source lfp] Endpoint `source.lfp` is not available on the network yet. Retrying in 100ms..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-
-        ZmqSourceSubscriber<trodes::network::TrodesLFPData> lfp_data(lfp_pub_endpoint_thread_local);
-        std::cerr << "Established connection to LFP data endpoint" << lfp_pub_endpoint_thread_local << " vs " << endpoint << std::endl;
+        ZmqSourceSubscriber<trodes::network::TrodesLFPData> lfp_data(endpoint);
+        std::cerr << "Established connection to LFP data endpoint" << endpoint << std::endl;
 
         std::stringstream result;
 
         long int data_count = 0;
         while (true) {
             auto recvd = lfp_data.receive();
-            // result << "L: ";
-            // result << recvd.localTimestamp << " ";
-            // result << recvd.systemTimestamp << " ";
-            // for (auto i : recvd.lfpData) {
-            //     result << i << ",";
-            // }
-            // result << "\n";
-            // std::cerr << "[lfp listener]" << result.str();
-            // result.str({});
-            // result.clear();
+            // recvd has     uint32_t localTimestamp; std::vector< int16_t > lfpData; int64_t systemTimestamp;
+
+            // The data that I want to filter is in recvd.lfpData
+
+            ripple_power.new_data(recvd.lfpData);
+            
+            // stimulation decision: (1) over threshold (2) 
+
             data_count++;
-            if (data_count % 10000 == 0)
+            if (data_count % 15000 == 0)
                 std::cerr << "Data count " << data_count;
         }                    
     });
@@ -170,23 +167,19 @@ void TrodesInterface::acq_activity()
                 qDebug() << "[In TrodesInterface] Got an acq message" << QString::fromStdString(msg.command);
                 if (msg.command == "play") { // Streaming is beginning
                     // this will block, but I think that's ok?
-                    // QThread::msleep(100);
-
+                    
+                    // QThread::msleep(100); // required before bug fix to make sure that there was time to replace the old endpoint in the table
                     std::string lfp_pub_endpoint;
                     while ((lfp_pub_endpoint = c->get_endpoint("source.lfp")) == "") {
                         std::cerr << "[source lfp] Endpoint `source.lfp` is not available on the network yet. Retrying in 100ms..." << std::endl;
                         QThread::msleep(100);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     }
-                    std::cerr << "source.lfp endpoint is " << lfp_pub_endpoint << std::endl;
-
-                    network_processing_loop(lfp_thread, lfp_pub_endpoint, server_address, server_port);
+                    network_processing_loop(lfp_thread, lfp_pub_endpoint, ripple_channels);
                 }
                 else if (msg.command == "stop") { // Streaming is beginning
                     // this will block, but I think that's ok?
-                    qDebug() << "Trying to delete lfp_thread";
-                    delete lfp_thread; // but we leaked endpoint
-                    qDebug() << "Success";
+                    delete lfp_thread; // have we leaked anything?
                 }
                 // probably emit something here
             }
@@ -198,6 +191,7 @@ void TrodesInterface::acq_activity()
 void TrodesInterface::updateParameters()
 {
     qDebug() << "Got new params! " << QThread::currentThreadId();
+
     emit parametersUpdated();
 }
 
@@ -205,4 +199,12 @@ void TrodesInterface::updateNetworkStatus()
 {
     currentNetworkStatus = trodesNetworkStatus;
     emit networkStatus(currentNetworkStatus);
+}
+
+void TrodesInterface::newRippleChannels(QList<int> channels)
+{
+    qDebug() << "updated ripple channels ";
+    foreach(auto &x,channels)
+        qDebug()<<x;
+    ripple_channels = std::vector<int>(channels.begin(), channels.end());
 }

@@ -28,6 +28,7 @@ public:
 public slots:
     void updateParameters();
     void updateNetworkStatus();
+    void newRippleChannels(QList<int>);
     void run(void);
 
     void sstatus_activity();
@@ -55,6 +56,7 @@ private:
     ZmqSourceSubscriber<trodes::network::TrodesLFPData> *lfp;
 
     std::thread *lfp_thread;
+    std::vector<int> ripple_channels;
 };
 
 #endif // TRODESINTERFACE_H

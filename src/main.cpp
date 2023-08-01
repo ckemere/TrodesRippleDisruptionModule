@@ -30,9 +30,10 @@ int main(int argc, char *argv[])
     // QObject::connect(interface_thread, SIGNAL(finished()), interface_thread, SLOT(deleteLater()));
 
     QObject::connect(&w, SIGNAL(updateParametersButton_clicked()), &trodesInterface, SLOT(updateParameters()));
+    QObject::connect(&w, SIGNAL(newRippleChannels(QList<int>)), &trodesInterface, SLOT(newRippleChannels(QList<int>)));
     QObject::connect(&trodesInterface, SIGNAL(parametersUpdated()), &w, SLOT(reflectParametersUpdated()));
-    QObject::connect(&trodesInterface, &TrodesInterface::networkStatus, 
-                     &w, &MainWindow::networkStatusUpdate);
+    QObject::connect(&trodesInterface, &TrodesInterface::networkStatus, &w, &MainWindow::networkStatusUpdate);
+    // QObject::connect(&w, &MainWindow::newRippleChannels, &trodesInterface, &TrodesInterface::newRippleChannels, Qt::QueuedConnection);
 
     QTimer statusUpdateTimer;
     QObject::connect(&statusUpdateTimer, SIGNAL(timeout()), &trodesInterface, SLOT(updateNetworkStatus()));

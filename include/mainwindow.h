@@ -73,6 +73,7 @@ signals:
     void updatedStimServerUrl(QString, quint16);
     void testStimulation();
     void appClosing();
+    void newRippleChannels(QList<int>);
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);

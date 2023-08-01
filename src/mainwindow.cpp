@@ -267,6 +267,9 @@ void MainWindow::on_freezeSelectionButton_clicked()
 
             ui->freezeSelectionButton->setText("Unfreeze Selection");
             nTrodeTableFrozen = true;
+
+            emit newRippleChannels(rippleNTrodeIndices);
+            qDebug() << "Emitted newRippleChannels";
         }
     }
 }
