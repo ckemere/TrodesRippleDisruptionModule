@@ -12,6 +12,8 @@
 
 #include <QSocketNotifier>
 
+#include <thread>
+
 
 class TrodesInterface : public QObject
 {
@@ -31,6 +33,8 @@ public slots:
     void sstatus_activity();
     void acq_activity();
 
+    void finish();
+
 signals:
     void networkStatus(TrodesNetworkStatus newStatus);
     void parametersUpdated(void);
@@ -48,6 +52,9 @@ private:
     ZmqSourceSubscriber<trodes::network::AcquisitionCommand> *acq;
     QSocketNotifier *acq_notifier;
 
+    ZmqSourceSubscriber<trodes::network::TrodesLFPData> *lfp;
+
+    std::thread *lfp_thread;
 };
 
 #endif // TRODESINTERFACE_H

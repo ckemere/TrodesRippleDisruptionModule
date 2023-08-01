@@ -270,3 +270,13 @@ void MainWindow::on_freezeSelectionButton_clicked()
         }
     }
 }
+
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    emit appClosing();
+    // QSettings settings("MyCompany", "MyApp");
+    // settings.setValue("geometry", saveGeometry());
+    // settings.setValue("windowState", saveState());
+    QMainWindow::closeEvent(event);
+}

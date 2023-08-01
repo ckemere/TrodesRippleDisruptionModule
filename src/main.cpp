@@ -24,9 +24,10 @@ int main(int argc, char *argv[])
     trodesInterface.moveToThread(interface_thread);
     // connect(trodesInterface, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
     QObject::connect(interface_thread, SIGNAL(started()), &trodesInterface, SLOT(run()));
-    QObject::connect(&trodesInterface, SIGNAL(finished()), interface_thread, SLOT(quit()));
-    QObject::connect(&trodesInterface, SIGNAL(finished()), &trodesInterface, SLOT(deleteLater()));
-    QObject::connect(interface_thread, SIGNAL(finished()), interface_thread, SLOT(deleteLater()));
+    QObject::connect(&w, &MainWindow::appClosing, &trodesInterface, &TrodesInterface::finish);
+    // QObject::connect(&trodesInterface, SIGNAL(finished()), interface_thread, SLOT(quit()));
+    // QObject::connect(&trodesInterface, SIGNAL(finished()), &trodesInterface, SLOT(deleteLater()));
+    // QObject::connect(interface_thread, SIGNAL(finished()), interface_thread, SLOT(deleteLater()));
 
     QObject::connect(&w, SIGNAL(updateParametersButton_clicked()), &trodesInterface, SLOT(updateParameters()));
     QObject::connect(&trodesInterface, SIGNAL(parametersUpdated()), &w, SLOT(reflectParametersUpdated()));
@@ -44,9 +45,9 @@ int main(int argc, char *argv[])
     stimInterface.moveToThread(stim_thread);
     // connect(trodesInterface, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
     QObject::connect(stim_thread, SIGNAL(started()), &stimInterface, SLOT(run()));
-    QObject::connect(&stimInterface, SIGNAL(finished()), stim_thread, SLOT(quit()));
-    QObject::connect(&stimInterface, SIGNAL(finished()), &stimInterface, SLOT(deleteLater()));
-    QObject::connect(stim_thread, SIGNAL(finished()), stim_thread, SLOT(deleteLater()));
+    // QObject::connect(&stimInterface, SIGNAL(finished()), stim_thread, SLOT(quit()));
+    // QObject::connect(&stimInterface, SIGNAL(finished()), &stimInterface, SLOT(deleteLater()));
+    // QObject::connect(stim_thread, SIGNAL(finished()), stim_thread, SLOT(deleteLater()));
 
     // QObject::connect(&w, SIGNAL(updateParametersButton_clicked()), &stimInterface, SLOT(updateParameters()));
     QObject::connect(&stimInterface, &StimInterface::stimStatusUpdate, &w, &MainWindow::stimServerStatusUpdate);

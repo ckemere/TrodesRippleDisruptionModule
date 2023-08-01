@@ -2,19 +2,9 @@
 
 
 #include <TrodesNetwork/Connection.h>
-#include <TrodesNetwork/Server.h>
-#include <TrodesNetwork/Resources/SourceSubscriber.h>
 #include <TrodesNetwork/Generated/AcquisitionCommand.h>
 #include <TrodesNetwork/Generated/SourceStatus.h>
-#include <TrodesNetwork/Generated/TrodesAnalogData.h>
-#include <TrodesNetwork/Generated/TrodesDigitalData.h>
-#include <TrodesNetwork/Generated/TrodesNeuralData.h>
-#include <TrodesNetwork/Generated/TrodesTimestampData.h>
 #include <TrodesNetwork/Generated/TrodesLFPData.h>
-#include <TrodesNetwork/Generated/TrodesSpikeWaveformData.h>
-#include <TrodesNetwork/Resources/RawSourceSubscriber.h>
-
-
 #include "ZmqSourceSubscriber.h"
 
 
@@ -39,72 +29,46 @@ std::atomic<double> rippleThreshold;
 std::atomic<int>    numActiveChannels;
 std::atomic<double> postDetectionDelay;
 
-void network_processing_loop (std::string server_address, int server_port) {
+// void network_processing_loop (std::string server_address, int server_port) {
+        // std::thread trodes_network([ address = server_address, port = server_port]() {
 
-    std::thread trodes_network([ address = server_address, port = server_port]() {
-        // Want to wait for a [trodes.source.pub]connect and a [trodes.acquisition]play
+void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_endpoint, std::string server_address, int server_port) {
 
-/*
-        while ((lfp_pub_endpoint = c.get_endpoint("source.lfp")) == "") {
-            std::cerr << "[source pub] Endpoint `source.lfp` is not available on the network yet. Retrying in 500ms..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    trodes_network = new std::thread([endpoint = lfp_pub_endpoint, server_address = server_address, server_port = server_port]() {
+        std::cerr << "Trodes lfp thread starting";
+        trodes::network::Connection con(server_address, server_port);
+
+        std::string lfp_pub_endpoint_thread_local;
+        while ((lfp_pub_endpoint_thread_local = con.get_endpoint("source.lfp")) == "") {
+            std::cerr << "[source lfp] Endpoint `source.lfp` is not available on the network yet. Retrying in 100ms..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
-        ZmqSourceSubscriber<trodes::network::AcquisitionCommand> lfp(lfp_pub_endpoint);
-
-
-        // Only valid until a [trodes.acquisition]stop. Stop is always generated with another [trodes.source.pub]connect if that's useful
+        ZmqSourceSubscriber<trodes::network::TrodesLFPData> lfp_data(lfp_pub_endpoint_thread_local);
+        std::cerr << "Established connection to LFP data endpoint" << lfp_pub_endpoint_thread_local << " vs " << endpoint << std::endl;
 
         std::stringstream result;
-        */
 
-        // while (true) {
-        //     auto recvd = sstatus.receive();
-        //     std::cerr << "[trodes.source.pub]" << recvd.message;
-        //     result.str({});
-        //     result.clear();
-        // }
-
-
-
-
-            //     while (true) {
-    //         auto recvd = sstatus.receive();
-    //         std::cerr << "[trodes.source.pub]" << recvd.message;
-    //         result.str({});
-    //         result.clear();
-    //     }
-    //     while (true) {
-    //         auto recvd = lfp.receive();
-    //         result << "L: ";
-    //         result << recvd.localTimestamp << " ";
-    //         result << recvd.systemTimestamp << " ";
-    //         for (auto i : recvd.lfpData) {
-    //             result << i << ",";
-    //         }
-    //         result << "\n";
-    //         // std::cerr << "[lfp listener]" << result.str();
-    //         result.str({});
-    //         result.clear();
-    //     }
-    //     while (true) {
-    //         auto recvd = acq.receive();
-    //         // zmq::message_t message;
-    //         // auto rv = acq.socket_.recv(message);
-    //         // if (!rv.has_value()) {
-    //         // // failed to receive // process errors!
-    //         // }
-    //         // auto recv = trodes::network::util::unpack<trodes::network::AcquisitionCommand>(message.to_string());
-
-    //         std::cerr << "[trodes.acquisition]" << recvd.command;
-    //         result.str({});
-    //         result.clear();
-    //     }
-
-
+        long int data_count = 0;
+        while (true) {
+            auto recvd = lfp_data.receive();
+            // result << "L: ";
+            // result << recvd.localTimestamp << " ";
+            // result << recvd.systemTimestamp << " ";
+            // for (auto i : recvd.lfpData) {
+            //     result << i << ",";
+            // }
+            // result << "\n";
+            // std::cerr << "[lfp listener]" << result.str();
+            // result.str({});
+            // result.clear();
+            data_count++;
+            if (data_count % 10000 == 0)
+                std::cerr << "Data count " << data_count;
+        }                    
     });
 
-    trodes_network.detach();
+    trodes_network->detach();
 
 }
 
@@ -123,7 +87,6 @@ void TrodesInterface::run()
 
     std::string source_pub_endpoint;
     std::string acq_pub_endpoint;
-    std::string lfp_pub_endpoint;
 
     while ((source_pub_endpoint = c->get_endpoint("trodes.source.pub")) == "") {
         std::cerr << "[source pub] Endpoint `trodes.source.pub` is not available on the network yet. Retrying in 500ms..." << std::endl;
@@ -151,19 +114,27 @@ void TrodesInterface::run()
 
     trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::connected;
 
-    network_processing_loop(server_address, server_port);
-
-
     // NOTE - network_processing_loop returns, so this function returns. The benefit of this is that we can process signals
     //        and slots. The cost is that it makes communication with the networking more complicated. 
     
     // emit finished();
 }
 
+void TrodesInterface::finish()
+{
+    delete acq_notifier;
+    delete sstatus_notifier;
+    delete sstatus;
+    delete acq;
+    delete lfp;
+    delete c;
+}
+
+
 void TrodesInterface::sstatus_activity()
 {
-    auto flags = sstatus->socket_.get(zmq::sockopt::events);
-    if(flags & ZMQ_POLLIN) {
+    auto flags = sstatus->socket_.get(zmq::sockopt::events); // zmq getsockopt could return an error that cppzmq just catches with an assert
+    if(flags & ZMQ_POLLIN) {    // not checking other flags like ZMQ_POLLOUT
         bool done = false;
         while (!done) {
             zmq::message_t message;
@@ -179,21 +150,12 @@ void TrodesInterface::sstatus_activity()
         }
 
     }
-    // if(flags & ZMQ_POLLOUT) {
-    //     emit readyWrite();
-    // }
 }
 
 void TrodesInterface::acq_activity()
 {
-    // uint32_t flags;
-    // size_t size = sizeof(flags);
-    //  CPPZMQ just asserts this
-    // if(!acq->socket_.get(zmq::sockopt::ZMQ_EVENTS, &flags, &size)) {
-    //     qWarning("Error reading ZMQ_EVENTS in ZMQSocket::sstatus_activity");
-    //     return;
-    // }
-    auto flags = acq->socket_.get(zmq::sockopt::events);
+
+    auto flags = acq->socket_.get(zmq::sockopt::events); // zmq getsockopt could return an error that cppzmq just catches with an assert
 
     if(flags & ZMQ_POLLIN) {
         bool done = false;
@@ -206,6 +168,26 @@ void TrodesInterface::acq_activity()
             else {
                 auto msg = trodes::network::util::unpack<trodes::network::AcquisitionCommand>(message.to_string());
                 qDebug() << "[In TrodesInterface] Got an acq message" << QString::fromStdString(msg.command);
+                if (msg.command == "play") { // Streaming is beginning
+                    // this will block, but I think that's ok?
+                    // QThread::msleep(100);
+
+                    std::string lfp_pub_endpoint;
+                    while ((lfp_pub_endpoint = c->get_endpoint("source.lfp")) == "") {
+                        std::cerr << "[source lfp] Endpoint `source.lfp` is not available on the network yet. Retrying in 100ms..." << std::endl;
+                        QThread::msleep(100);
+                        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+                    std::cerr << "source.lfp endpoint is " << lfp_pub_endpoint << std::endl;
+
+                    network_processing_loop(lfp_thread, lfp_pub_endpoint, server_address, server_port);
+                }
+                else if (msg.command == "stop") { // Streaming is beginning
+                    // this will block, but I think that's ok?
+                    qDebug() << "Trying to delete lfp_thread";
+                    delete lfp_thread; // but we leaked endpoint
+                    qDebug() << "Success";
+                }
                 // probably emit something here
             }
         }

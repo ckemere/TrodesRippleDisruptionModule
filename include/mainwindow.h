@@ -72,10 +72,12 @@ signals:
     void updateParametersButton_clicked();
     void updatedStimServerUrl(QString, quint16);
     void testStimulation();
+    void appClosing();
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);
     void stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus);
+    void closeEvent(QCloseEvent *event);
 
 private slots:
     void on_updateParametersButton_clicked();

@@ -18,9 +18,9 @@
         <Argument flag="-resolutionX" value="1280"/>
         <Argument flag="-resolutionY" value="720"/>
       </SingleModuleConfiguration-->
-      <SingleModuleConfiguration
+      <!-- <SingleModuleConfiguration
         moduleName="RippleDisruption" sendNetworkInfo="1" sendTrodesConfig="1">
-      </SingleModuleConfiguration>
+      </SingleModuleConfiguration> -->
 </ModuleConfiguration>
   
 <!-- Spike configuration (NTrode setup)-->
