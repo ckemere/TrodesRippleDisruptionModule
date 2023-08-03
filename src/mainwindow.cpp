@@ -292,6 +292,7 @@ void MainWindow::on_freezeSelectionButton_clicked()
 void MainWindow::on_trainLFPStatisticsButton_clicked() 
 {
     int training_duration_samples = ui->trainingDurationSpinBox->value() * SAMPLES_PER_SECOND;
+    ui->trainingProgressBar->setRange(0, training_duration_samples);
     emit startTraining(training_duration_samples);
     qDebug() << "Start training!";
 }
@@ -302,6 +303,7 @@ void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<doubl
         nTrodeTableRows[i]->setParams(means[i],std::sqrt(vars[i]));
     }
     qDebug() << "Got training update " << training_so_far;
+    ui->trainingProgressBar->setValue(training_so_far);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

@@ -98,8 +98,8 @@ void network_processing_loop (std::thread *trodes_network,
             // (3) with instantaneous rate less than X and (4) at least XX after previous stimulation
 
             data_count++;
-            if (data_count % 15000 == 0)
-                std::cerr << "Data count " << data_count;
+            if (data_count % 1500 == 0)
+                std::cerr << "Data count " << data_count << std::endl;
         }                    
     });
 
@@ -281,6 +281,6 @@ void TrodesInterface::reportIFaceData()
 {
     statistics_lock.lock();
     if (training_parameters)
-        emit newTrainingStats(means, vars, training_sample_count);
+        emit newTrainingStats(means, vars, training_duration);
     statistics_lock.unlock();
 }
