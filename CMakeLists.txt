@@ -12,10 +12,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Xml Network)
 
-
 # set up Trodes interface link_directories
-set(TRODES_DIR /home/kemerelab/Code/Trodes)
-set(TRODES_NETWORK_DIR /home/kemerelab/Code/Trodes/trodesnetwork)
+set(TRODES_DIR /home/ckemere/TrodesStuff/trodes-mirror)
+set(TRODES_NETWORK_DIR /home/ckemere/TrodesStuff/trodes-mirror/trodesnetwork)
 link_directories(${TRODES_DIR}/Libraries/Linux/TrodesNetwork/lib)
 
 
@@ -29,6 +28,7 @@ set(PROJECT_SOURCES
 
     src/ripplepower.cpp
 
+    include/moduledefines.h
     include/mainwindow.h
     include/trodesinterface.h
     include/stiminterface.h

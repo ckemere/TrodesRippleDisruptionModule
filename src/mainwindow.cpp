@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "moduledefines.h"
 
 #include <QString>
 #include <QThread>
@@ -7,6 +8,9 @@
 #include <QMessageBox>
 #include <QUrl>
 #include <QPalette>
+#include <QTimer>
+
+#include <cmath>
 
 TableRow::TableRow(QString idStr, QString meanStr, QString stdStr, int id_index)
 : id_index(id_index), id(new QTableWidgetItem(idStr)), mean(new QTableWidgetItem(meanStr)), std(new QTableWidgetItem(stdStr))
@@ -71,7 +75,17 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
     TrodesConfiguration parsedConfiguration;
     QString errors = parsedConfiguration.readTrodesConfig(config_filename);
-    qDebug() << "[RippleDisruption] Read config. Errors? " << errors;
+
+    if ((parsedConfiguration.hardwareConf.sourceSamplingRate != 30000) || (parsedConfiguration.hardwareConf.lfpSubsamplingInterval != 20)) {
+
+        startupErrorMsgBox = new QMessageBox(QMessageBox::Warning, "Bad configuration parameters", 
+            "LFP sampling rate has to be 1500. Expecting samplingRate of 30k and lfpSubsamplingInterval of 20! Unsupported behavior will follow if you continue.",
+                QMessageBox::Ok);
+        QTimer::singleShot(0, startupErrorMsgBox, SLOT(exec()));
+    }
+    else {
+        qDebug() << "[RippleDisruption] Good! " << parsedConfiguration.hardwareConf.sourceSamplingRate << "and " << parsedConfiguration.hardwareConf.lfpSubsamplingInterval;
+    }
 
     for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
         nTrodeIds.append(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId);
@@ -274,6 +288,21 @@ void MainWindow::on_freezeSelectionButton_clicked()
     }
 }
 
+
+void MainWindow::on_trainLFPStatisticsButton_clicked() 
+{
+    int training_duration_samples = ui->trainingDurationSpinBox->value() * SAMPLES_PER_SECOND;
+    emit startTraining(training_duration_samples);
+    qDebug() << "Start training!";
+}
+
+void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_so_far)
+{
+    for (int i=0; i < means.size(); i++) {
+        nTrodeTableRows[i]->setParams(means[i],std::sqrt(vars[i]));
+    }
+    qDebug() << "Got training update " << training_so_far;
+}
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {

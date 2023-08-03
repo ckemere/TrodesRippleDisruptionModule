@@ -12,6 +12,7 @@ public:
 
 public:
     void new_data(std::vector<int16_t> data);
+    std::vector<double> current_data;
 
 
 private:

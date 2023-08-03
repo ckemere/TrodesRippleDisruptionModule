@@ -11,6 +11,7 @@
 #include <TrodesNetwork/Generated/TrodesLFPData.h>
 
 #include <QSocketNotifier>
+#include <QTimer>
 
 #include <thread>
 
@@ -30,6 +31,10 @@ public slots:
     void updateNetworkStatus();
     void newRippleChannels(QList<int>);
     void run(void);
+    
+    void startTraining(int);
+
+    void reportIFaceData();
 
     void sstatus_activity();
     void acq_activity();
@@ -41,6 +46,7 @@ signals:
     void parametersUpdated(void);
     void finished();
     void error(QString err);
+    void newTrainingStats(std::vector<double>, std::vector<double>, int);
 
 private:
     TrodesNetworkStatus currentNetworkStatus;
@@ -57,6 +63,9 @@ private:
 
     std::thread *lfp_thread;
     std::vector<int> ripple_channels;
+
+    QTimer *ifaceUpdateTimer;
+
 };
 
 #endif // TRODESINTERFACE_H

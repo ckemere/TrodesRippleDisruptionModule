@@ -10,6 +10,7 @@
 #include <QString>
 #include <QList>
 #include <QTableWidgetItem>
+#include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -24,6 +25,7 @@ public:
 public:
     void setTableRow(QTableWidget *table, int row);
     void highlight(bool highlight = true);
+    void setParams(double m, double s) {mean_val = m; std_val = s; mean->setData(Qt::DisplayRole,m); std->setData(Qt::DisplayRole,s);}
 
     int id_val;
     double mean_val;
@@ -74,11 +76,14 @@ signals:
     void testStimulation();
     void appClosing();
     void newRippleChannels(QList<int>);
+    void startTraining(int);
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);
     void stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus);
     void closeEvent(QCloseEvent *event);
+
+    void newRipplePowerData(std::vector<double>, std::vector<double>, int);
 
 private slots:
     void on_updateParametersButton_clicked();
@@ -87,6 +92,7 @@ private slots:
     void reflectParametersUpdated();
     void on_raspberryPiLineEdit_editingFinished();
     void on_testStimButton_clicked();
+    void on_trainLFPStatisticsButton_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -99,6 +105,8 @@ private:
 
 
     QList<TableRow*> nTrodeTableRows; // For display
+
+    QMessageBox *startupErrorMsgBox;
 
 };
 #endif // MAINWINDOW_H

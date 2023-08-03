@@ -7,21 +7,39 @@
  <BenchmarkConfiguration/>
  <NetworkConfiguration networkType="zmq" trodesHost="127.0.0.1" trodesPort="10000"/>
 
-  <!-- <GlobalOptions numChannels="32" filePath="/Users/karlssonm/datadump" filePrefix="test" samplingRate="30000"/> -->
- <HardwareConfiguration samplingRate="30000" lfpSubsamplingInterval="20" useIntrinsics="1" numChannels="32">
-  <Device name="MCU_IO" packetOrderPreference="10" numBytes="1" available="1">
-   <Channel id="MCU_Din1" dataType="digital" bit="0" startByte="0"/>
-   <Channel id="MCU_Din2" dataType="digital" bit="1" startByte="0"/>
-   <Channel id="MCU_Din3" dataType="digital" bit="2" startByte="0"/>
-   <Channel id="MCU_Din4" dataType="digital" bit="3" startByte="0"/>
-   <Channel id="MCU_Din5" dataType="digital" bit="4" startByte="0"/>
-   <Channel id="MCU_Din6" dataType="digital" bit="5" startByte="0"/>
+ <HardwareConfiguration samplingRate="30000" lfpSubsamplingInterval="20" useIntrinsics="1" numChannels="64">
+   <Device name="OpenEphys" packetOrderPreference="10" numBytes = "21" available="1"> <!-- num bytes should be n+1 -->
+      <Channel id="Din1" dataType="digital" startByte="0" bit="0" />
+      <Channel id="Din2" dataType="digital" startByte="0" bit="1" />
+      <Channel id="Din3" dataType="digital" startByte="0" bit="2" />
+      <Channel id="Din4" dataType="digital" startByte="0" bit="3" />
+      <Channel id="Din5" dataType="digital" startByte="0" bit="4" />
+      <Channel id="Din6" dataType="digital" startByte="0" bit="5" />
+      <Channel id="Din7" dataType="digital" startByte="0" bit="6" />
+      <Channel id="Din8" dataType="digital" startByte="0" bit="7" />
+
+      <Channel id="Ain1" dataType="analog" startByte="2" bit="0" />
+      <Channel id="Ain2" dataType="analog" startByte="4" bit="0" />
+      <Channel id="Ain3" dataType="analog" startByte="6" bit="0" />
+      <Channel id="Ain4" dataType="analog" startByte="8" bit="0" />
+      <Channel id="Ain5" dataType="analog" startByte="10" bit="0" />
+      <Channel id="Ain6" dataType="analog" startByte="12" bit="0" />
+      <Channel id="Ain7" dataType="analog" startByte="14" bit="0" />
+      <Channel id="Ain8" dataType="analog" startByte="16" bit="0" />
+
+      <!-- This is the interleaved Accelerometer data. Demux is not working -->
+      <!-- Note that there's one auxilary channel per chip! -->
+      <Channel id="Accel" dataType="analog" startByte="18" bit="0" /> 
+
+      <!-- <Channel id="AccelX" interleavedDataIDByte="18" interleavedDataIDBit="0" dataType="analog" startByte="18" bit="0" />
+      <Channel id="AccelY" interleavedDataIDByte="18" interleavedDataIDBit="1" dataType="analog" startByte="18" bit="0" />
+      <Channel id="AccelZ" interleavedDataIDByte="18" interleavedDataIDBit="2" dataType="analog" startByte="18" bit="0" /> -->
+       
   </Device>
  </HardwareConfiguration>    
- <!-- <HardwareConfiguration /> -->
 
 <!-- Stream display configuration -->
-  <!-- <StreamDisplay columns="2"/> -->
+
   <StreamDisplay pages="1" pageBreaks="" horizontal="0" backgroundColor="#404040" columns="2"/>
 
   <ModuleConfiguration>
@@ -31,13 +49,13 @@
         <Argument flag="-resolutionX" value="1280"/>
         <Argument flag="-resolutionY" value="720"/>
       </SingleModuleConfiguration-->
-      <!-- <SingleModuleConfiguration
+      <SingleModuleConfiguration
         moduleName="RippleDisruption" sendNetworkInfo="1" sendTrodesConfig="1">
-      </SingleModuleConfiguration> -->
+      </SingleModuleConfiguration>
 </ModuleConfiguration>
   
 <!-- Spike configuration (NTrode setup)-->
- <SpikeConfiguration chanPerChip="32" categories="" device="intan">
+ <SpikeConfiguration chanPerChip="64" categories="" device="intan">
     <SpikeNTrode id="4" color="#FF0303" lowFilter="600" highFilter="6000" refNTrode="1" refChan="1" lfpChan="1" lfpHighFilter="200" refOn="0" filterOn="1" lfpFilterOn="0" >
       <SpikeChannel thresh="30" maxDisp="200" hwChan="0"/>
       <SpikeChannel thresh="30" maxDisp="200" hwChan="1"/>
@@ -137,4 +155,28 @@
   </SpikeConfiguration>
 
 
+  <AuxDisplayConfiguration>
+
+      <DispChannel id="Ain1" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain2" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain3" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain4" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain5" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain6" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain7" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+      <DispChannel id="Ain8" device="OpenEphys" maxDisp="2000" color="#AAFFAA"/>
+
+      <DispChannel id="Accel" device="OpenEphys" maxDisp="2" color="#AAFFAA"/>
+
+      <DispChannel id="Din1" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din2" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din3" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din4" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din5" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din6" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din7" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+      <DispChannel id="Din8" device="OpenEphys" maxDisp="2" color="#AAAAAA"/>
+
+    
+  </AuxDisplayConfiguration>
 </Configuration>

@@ -75,7 +75,7 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_6"/>
+           <widget class="QDoubleSpinBox" name="trainingDurationSpinBox"/>
           </item>
          </layout>
         </widget>

@@ -1,6 +1,6 @@
 #include "trodesinterface.h"
-
 #include "ripplepower.h"
+#include "moduledefines.h"
 
 #include <TrodesNetwork/Connection.h>
 #include <TrodesNetwork/Generated/AcquisitionCommand.h>
@@ -18,24 +18,51 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <mutex>
 
 #include <QDebug>
 #include <QThread>
+
+#include <QTimer>
+
 
 // Global variables for communicating between TrodesNet thread and QT
 std::atomic<TrodesInterface::TrodesNetworkStatus> trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::not_connected;
 
 // Parameters that might be dynamic
-std::atomic<double> rippleThreshold;
-std::atomic<int>    numActiveChannels;
-std::atomic<double> postDetectionDelay;
+std::atomic<double> ripple_threshold;
+std::atomic<int> num_active_channels;
+std::atomic<int> post_detection_delay; // in samples
 
-// void network_processing_loop (std::string server_address, int server_port) {
-        // std::thread trodes_network([ address = server_address, port = server_port]() {
+std::atomic<bool> training_parameters;
+std::atomic<int> training_duration; // in samples
+std::atomic<bool> stimulation_enabled;
+
+std::mutex statistics_lock;
+std::vector<double> means;
+std::vector<double> vars;
+int training_sample_count;
+
+std::atomic<double> recent_ripple_rate; // over last 30 s
+
+void update_statistics(std::vector<double> new_data)
+{
+    double old_mean_sq;
+    
+    statistics_lock.lock();
+    training_sample_count++;
+    for (int i=0; i < means.size(); i++) {
+        old_mean_sq = means[i]*means[i];
+        means[i] = means[i] + (new_data[i] - means[i]) / training_sample_count;
+        vars[i] = vars[i] + means[i]*means[i] - old_mean_sq + (new_data[i]*new_data[i] - vars[i] - old_mean_sq)/training_sample_count; // this is old means
+    }
+    statistics_lock.unlock();
+}
 
 void network_processing_loop (std::thread *trodes_network, 
                               std::string lfp_pub_endpoint, 
-                              std::vector<int> ripple_channels) {
+                              std::vector<int> ripple_channels)
+{
 
     trodes_network = new std::thread([endpoint = lfp_pub_endpoint, ripple_channels = ripple_channels]() {
         std::cerr << "Ripple channels size: " << ripple_channels.size() << std::endl;
@@ -56,8 +83,19 @@ void network_processing_loop (std::thread *trodes_network,
             // The data that I want to filter is in recvd.lfpData
 
             ripple_power.new_data(recvd.lfpData);
+
+            if (training_parameters) {
+                update_statistics(ripple_power.current_data);
+                if (--training_duration <= 0)
+                    training_parameters = false;
+            }
+
+            if (stimulation_enabled) {
+
+            }
             
-            // stimulation decision: (1) over threshold (2) 
+            // stimulation decision: (1) over threshold (2) with the right number of channels 
+            // (3) with instantaneous rate less than X and (4) at least XX after previous stimulation
 
             data_count++;
             if (data_count % 15000 == 0)
@@ -73,6 +111,9 @@ TrodesInterface::TrodesInterface(QObject *parent = nullptr, std::string server_a
     : QObject{parent}
     , server_address(server_address), server_port(server_port)
 {
+    // set up globals
+    num_active_channels = 1; // default value is 1
+    post_detection_delay = 0; 
 
 }
 
@@ -110,6 +151,10 @@ void TrodesInterface::run()
     connect(acq_notifier, SIGNAL(activated(QSocketDescriptor, QSocketNotifier::Type)), this, SLOT(acq_activity()));
 
     trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::connected;
+
+    ifaceUpdateTimer = new QTimer();
+    QObject::connect(ifaceUpdateTimer, SIGNAL(timeout()), this, SLOT(reportIFaceData()));
+    ifaceUpdateTimer->start(500);
 
     // NOTE - network_processing_loop returns, so this function returns. The benefit of this is that we can process signals
     //        and slots. The cost is that it makes communication with the networking more complicated. 
@@ -207,4 +252,35 @@ void TrodesInterface::newRippleChannels(QList<int> channels)
     foreach(auto &x,channels)
         qDebug()<<x;
     ripple_channels = std::vector<int>(channels.begin(), channels.end());
+
+    statistics_lock.lock();
+    means.resize(ripple_channels.size(), 0);
+    vars.resize(ripple_channels.size(), 0);
+    statistics_lock.unlock();
+
+}
+
+void TrodesInterface::startTraining(int new_training_duration)
+{
+    statistics_lock.lock();
+    training_duration = new_training_duration; // This is changing an atomic variable
+    if (!training_parameters) {
+        for (int i=0; i < means.size(); i++)
+        {
+            means[i] = 0.0;
+            vars[i] = 0.0;
+        }
+        training_parameters = true;
+    }
+    statistics_lock.unlock();
+
+    qDebug() << "New training duration recevied";
+}
+
+void TrodesInterface::reportIFaceData()
+{
+    statistics_lock.lock();
+    if (training_parameters)
+        emit newTrainingStats(means, vars, training_sample_count);
+    statistics_lock.unlock();
 }

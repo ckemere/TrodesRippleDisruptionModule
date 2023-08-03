@@ -33,6 +33,8 @@ int main(int argc, char *argv[])
     QObject::connect(&w, SIGNAL(newRippleChannels(QList<int>)), &trodesInterface, SLOT(newRippleChannels(QList<int>)));
     QObject::connect(&trodesInterface, SIGNAL(parametersUpdated()), &w, SLOT(reflectParametersUpdated()));
     QObject::connect(&trodesInterface, &TrodesInterface::networkStatus, &w, &MainWindow::networkStatusUpdate);
+    QObject::connect(&trodesInterface, &TrodesInterface::newTrainingStats, &w, &MainWindow::newRipplePowerData);
+    QObject::connect(&w, &MainWindow::startTraining, &trodesInterface, &TrodesInterface::startTraining);    
     // QObject::connect(&w, &MainWindow::newRippleChannels, &trodesInterface, &TrodesInterface::newRippleChannels, Qt::QueuedConnection);
 
     QTimer statusUpdateTimer;
