@@ -65,7 +65,7 @@ public:
     ~MainWindow();
 
 
-    void redrawNTrodeTable(QList<int> order = QList<int>());
+    void redrawNTrodeTable(QList<unsigned int> order = QList<unsigned int>());
 
     QString server_address = "127.0.0.1";
     int server_port = 10000;
@@ -75,7 +75,7 @@ signals:
     void updatedStimServerUrl(QString, quint16);
     void testStimulation();
     void appClosing();
-    void newRippleChannels(QList<int>);
+    void newRippleChannels(QList<unsigned int>);
     void startTraining(int);
 
 public slots:
@@ -100,13 +100,15 @@ private:
     QList<int> nTrodeIds; // loaded from config file
     bool nTrodeTableFrozen = false;
 
-    QList<int> rippleNTrodeIndices; // indices into nTrodeIds
-    QList<int> noiseNTrodeIndices; // indices into nTrodeIds
+    QList<unsigned int> rippleNTrodeIndices; // indices into nTrodeIds
+    QList<unsigned int> noiseNTrodeIndices; // indices into nTrodeIds
 
 
     QList<TableRow*> nTrodeTableRows; // For display
 
     QMessageBox *startupErrorMsgBox;
+
+    bool currentlyTraining;
 
 };
 #endif // MAINWINDOW_H

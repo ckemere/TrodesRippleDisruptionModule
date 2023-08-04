@@ -95,6 +95,14 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
     ui->tableWidget->horizontalHeaderItem(0)->setText("NTrode\nId");
 
+    currentlyTraining = false;
+    ui->trainingDurationSpinBox->setEnabled(false);
+    ui->trainingDurationLabel->setEnabled(false);
+    ui->trainingProgressBar->setEnabled(false);
+    ui->trainingProgressLabel->setEnabled(false);
+    ui->trainLFPStatisticsButton->setEnabled(false);
+
+
     ui->statusbar->showMessage("Establishing Trodes interface.");
     on_raspberryPiLineEdit_editingFinished(); // updates trodes interface status
 }
@@ -202,7 +210,7 @@ void MainWindow::on_testStimButton_clicked()
 
 /* Code related to the NTrode Selection Process*/
 
-void MainWindow::redrawNTrodeTable(QList<int> order)
+void MainWindow::redrawNTrodeTable(QList<unsigned int> order)
 {
     if (ui->tableWidget->rowCount() != nTrodeIds.count()) 
         ui->tableWidget->setRowCount(nTrodeIds.count());
@@ -214,11 +222,11 @@ void MainWindow::redrawNTrodeTable(QList<int> order)
     nTrodeTableRows.clear();
 
     if (order.isEmpty()) // Default order is natural
-        for (int i=0; i < nTrodeIds.length(); i++)
+        for (unsigned int i=0; i < nTrodeIds.length(); i++)
             order.append(i);
 
-    for (int i=0; i < order.length(); i++) {
-        int idx = order[i];
+    for (unsigned int i=0; i < order.length(); i++) {
+        unsigned int idx = order[i];
         TableRow *row = new TableRow(QString::number(nTrodeIds[idx]), "", "", idx);
         nTrodeTableRows.append(row);
         row->setTableRow(ui->tableWidget, i);
@@ -233,7 +241,7 @@ void MainWindow::redrawNTrodeTable(QList<int> order)
 void MainWindow::on_tableWidget_cellClicked(int row, int column)
 {
     qDebug() << "Clicked a cell!";
-    int nTrodeId_index = nTrodeTableRows[row]->id_index;
+    unsigned int nTrodeId_index = nTrodeTableRows[row]->id_index;
     if (column == 0) { // force click of ID cell
         if (rippleNTrodeIndices.contains(nTrodeId_index)) {
             // unhighlight!
@@ -248,9 +256,9 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
 }
 
 void MainWindow::on_freezeSelectionButton_clicked()
-{
+{   
     if (nTrodeTableFrozen) {
-        QList<int> raw_order;
+        QList<unsigned int> raw_order;
         for (int i = 0; i < nTrodeIds.length(); i++)
             raw_order.append(i);
         
@@ -258,6 +266,12 @@ void MainWindow::on_freezeSelectionButton_clicked()
 
         ui->freezeSelectionButton->setText("Freeze Selection");
         nTrodeTableFrozen = false;
+
+        ui->trainingDurationSpinBox->setEnabled(false);
+        ui->trainingDurationLabel->setEnabled(false);
+        ui->trainingProgressBar->setEnabled(false);
+        ui->trainingProgressLabel->setEnabled(false);
+        ui->trainLFPStatisticsButton->setEnabled(false);
     }
     else {
         if (rippleNTrodeIndices.isEmpty()) {
@@ -268,11 +282,11 @@ void MainWindow::on_freezeSelectionButton_clicked()
         }
         else {
             // Push selected channels to the top
-            QList<int> new_order;
+            QList<unsigned int> new_order;
             new_order.append(rippleNTrodeIndices);
 
             // Get unselected channels
-            for (int i = 0; i < nTrodeIds.length(); i++) {
+            for (unsigned int i = 0; i < nTrodeIds.length(); i++) {
                 if (!new_order.contains(i))
                 new_order.append(i);
             }
@@ -284,6 +298,13 @@ void MainWindow::on_freezeSelectionButton_clicked()
 
             emit newRippleChannels(rippleNTrodeIndices);
             qDebug() << "Emitted newRippleChannels";
+
+            ui->trainingDurationSpinBox->setEnabled(true);
+            ui->trainingDurationLabel->setEnabled(true);
+            ui->trainingProgressBar->setEnabled(true);
+            ui->trainingProgressLabel->setEnabled(true);
+            ui->trainLFPStatisticsButton->setEnabled(true);
+
         }
     }
 }
@@ -295,15 +316,20 @@ void MainWindow::on_trainLFPStatisticsButton_clicked()
     ui->trainingProgressBar->setRange(0, training_duration_samples);
     emit startTraining(training_duration_samples);
     qDebug() << "Start training!";
+    currentlyTraining = true;
 }
 
-void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_so_far)
+void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_left)
 {
     for (int i=0; i < means.size(); i++) {
         nTrodeTableRows[i]->setParams(means[i],std::sqrt(vars[i]));
     }
-    qDebug() << "Got training update " << training_so_far;
-    ui->trainingProgressBar->setValue(training_so_far);
+    qDebug() << "Got training update " << training_left;
+    if (currentlyTraining) {
+        ui->trainingProgressBar->setValue(training_left);
+        if (training_left == 0)
+            currentlyTraining = false;
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

@@ -27,13 +27,17 @@ set(PROJECT_SOURCES
     src/stiminterface.cpp
 
     src/ripplepower.cpp
+)
 
+set(PROJECT_INCLUDES
     include/moduledefines.h
     include/mainwindow.h
     include/trodesinterface.h
     include/stiminterface.h
     include/ripplepower.h
+)
 
+set(TRODES_SOURCES
     ${TRODES_DIR}/Trodes/src-main/trodesSocketDefines.h
     ${TRODES_DIR}/Trodes/src-config/configuration.h
     ${TRODES_DIR}/Trodes/src-config/configuration.cpp
@@ -42,7 +46,11 @@ set(PROJECT_SOURCES
 qt_add_executable(RippleDisruption
     MANUAL_FINALIZATION
     ${PROJECT_SOURCES}
+    ${PROJECT_INCLUDES}
+    ${TRODES_SOURCES}
 )
+
+set_source_files_properties(${PROJECT_SOURCES} PROPERTIES COMPILE_FLAGS "-Wall -Wextra -Wconversion -Wsign-conversion")
 #add_executable(RippleDisruption
 #    ${PROJECT_SOURCES}
 #)
@@ -54,6 +62,7 @@ target_include_directories(RippleDisruption
     ${TRODES_DIR}
     ${TRODES_DIR}/Trodes/src-main/
     ${TRODES_DIR}/Trodes/src-config/
+    SYSTEM
     ${TRODES_DIR}/extern/msgpack-c/include
     ${TRODES_DIR}/extern/cppzmq
     ${TRODES_DIR}/extern/zmq/include
@@ -71,7 +80,7 @@ target_compile_definitions(RippleDisruption PRIVATE
     GIT_COMMIT="${GIT_COMMIT_STRING}" # needed for stuff included in in configuration reading
     # TRODES_CODE
 )
-target_compile_options(RippleDisruption PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
+# target_compile_options(RippleDisruption PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
 # target_compile_options(RippleDisruption PRIVATE -Werror -Wall -Wextra -Wconversion -Wsign-conversion)
 
 set_target_properties(RippleDisruption PROPERTIES

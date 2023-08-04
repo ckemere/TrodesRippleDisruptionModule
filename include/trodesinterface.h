@@ -29,10 +29,10 @@ public:
 public slots:
     void updateParameters();
     void updateNetworkStatus();
-    void newRippleChannels(QList<int>);
+    void newRippleChannels(QList<unsigned int>);
     void run(void);
     
-    void startTraining(int);
+    void startTraining(int numberOfTrainingSamples);
 
     void reportIFaceData();
 
@@ -62,7 +62,7 @@ private:
     ZmqSourceSubscriber<trodes::network::TrodesLFPData> *lfp;
 
     std::thread *lfp_thread;
-    std::vector<int> ripple_channels;
+    std::vector<unsigned int> ripple_channels;
 
     QTimer *ifaceUpdateTimer;
 
