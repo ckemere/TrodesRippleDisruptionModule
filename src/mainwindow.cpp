@@ -44,53 +44,13 @@ void TableRow::highlight(bool highlight)
     }
 }
 
-MainWindow::MainWindow(QWidget *parent, QStringList arguments)
+MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow),
+    , ui(new Ui::MainWindow), nTrodeIds(nTrodeIds), 
     currentlyTraining(false), currentlyStimulating(false)
 {
     ui->setupUi(this);
     ui->rejectionParamsGroupBox->setEnabled(false);
-
-    QString config_filename = "";
-
-    int optionInd = 0;
-    while (optionInd < arguments.length()) {
-        qDebug() << "Option: " << arguments.at(optionInd);
-        if (arguments.length() > optionInd+1 )
-            qDebug() << "Option(+1): " << arguments.at(optionInd+1);
-        if ((arguments.at(optionInd).compare("-serverAddress",Qt::CaseInsensitive)==0) /*&& (arguments.length() > optionInd+1)*/) {
-            server_address = arguments.at(optionInd+1);
-            optionInd++;
-        } else if ((arguments.at(optionInd).compare("-serverPort",Qt::CaseInsensitive)==0) && (arguments.length() > optionInd+1)) {
-            server_port = arguments.at(optionInd+1).toInt();
-            optionInd++;
-        }
-        else if ((arguments.at(optionInd).compare("-trodesConfig",Qt::CaseInsensitive)==0) && (arguments.length() > optionInd+1)) {
-            config_filename = arguments.at(optionInd+1);
-            optionInd++;
-        }
-        optionInd++;
-    }
-    qDebug() << "[RippleDisruption]" << "Server Address: " << server_address <<"Server Port: " <<server_port <<"Config file name: " << config_filename;
-
-    TrodesConfiguration parsedConfiguration;
-    QString errors = parsedConfiguration.readTrodesConfig(config_filename);
-
-    if ((parsedConfiguration.hardwareConf.sourceSamplingRate != 30000) || (parsedConfiguration.hardwareConf.lfpSubsamplingInterval != 20)) {
-
-        startupErrorMsgBox = new QMessageBox(QMessageBox::Warning, "Bad configuration parameters", 
-            "LFP sampling rate has to be 1500. Expecting samplingRate of 30k and lfpSubsamplingInterval of 20! Unsupported behavior will follow if you continue.",
-                QMessageBox::Ok);
-        QTimer::singleShot(0, startupErrorMsgBox, SLOT(exec()));
-    }
-    else {
-        qDebug() << "[RippleDisruption] Good! " << parsedConfiguration.hardwareConf.sourceSamplingRate << "and " << parsedConfiguration.hardwareConf.lfpSubsamplingInterval;
-    }
-
-    for (int i=0; i < parsedConfiguration.spikeConf.ntrodes.length(); i++) {
-        nTrodeIds.append(parsedConfiguration.spikeConf.ntrodes[i]->nTrodeId);
-    }
 
     redrawNTrodeTable();
 
@@ -314,7 +274,7 @@ void MainWindow::on_freezeSelectionButton_clicked()
 
 void MainWindow::on_trainLFPStatisticsButton_clicked() 
 {
-    if (currentlyTraining) {
+    if (!currentlyTraining) {
         int training_duration_samples = ui->trainingDurationSpinBox->value() * SAMPLES_PER_SECOND;
         ui->trainingProgressBar->setRange(0, training_duration_samples);
         emit startTraining(training_duration_samples);

@@ -1,6 +1,7 @@
 #include "ripplepower.h"
 #include <cstring>
 #include <cmath>
+#include <iostream>
 
 #define ripple_filter_len 30
 #define smoothing_filter_len 33
@@ -80,13 +81,16 @@ double **smoothing_circ_buffer;
 unsigned int fidx, sidx;
 
 RipplePower::RipplePower(unsigned int num_channels):
-    output(num_channels), ripple_channels()
+    output(num_channels)
 {
     input_length = num_channels;
 
     // Allocate a filtering circular buffer for each LFP channel. 
     // For 16 tetrodes, this is something like 2 KB for each filter.
     // It's a bit annoying as it will likely get dropped from cache, but I'm not sure how to help this.
+    filter_circ_buffer = new double* [num_channels];
+    smoothing_circ_buffer = new double* [num_channels];
+    
     for (int ch = 0; ch < num_channels; ch++) {
         filter_circ_buffer[ch] = new double[ripple_filter_len];
         smoothing_circ_buffer[ch] = new double[smoothing_filter_len];

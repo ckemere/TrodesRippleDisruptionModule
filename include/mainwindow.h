@@ -3,7 +3,6 @@
 
 #include "trodesinterface.h"
 #include "stiminterface.h"
-#include "Trodes/src-config/configuration.h"
 
 
 #include <QMainWindow>
@@ -61,14 +60,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr, QStringList arguments = QStringList());
+    MainWindow(QWidget *parent = nullptr, QList<int> = QList<int>());
     ~MainWindow();
 
-
     void redrawNTrodeTable(QList<unsigned int> order = QList<unsigned int>());
-
-    QString server_address = "127.0.0.1";
-    int server_port = 10000;
 
 signals:
     void updateParametersButton_clicked();

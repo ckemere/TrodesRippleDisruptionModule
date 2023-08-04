@@ -60,8 +60,6 @@ std::vector<double> means;
 std::vector<double> vars;
 std::vector<double> std_devs;
 
-bool data_vectors_initialized; // this is only ever used in the network processing loop thread so doesn't need a mutex
-
 // Make these global to avoid reallocation
 int training_sample_count;
 RipplePower *ripple_power;
@@ -72,7 +70,6 @@ void initialize_vectors(unsigned int n_channels) {
     std_devs.resize(n_channels, 0.0);
 
     ripple_power = new RipplePower(n_channels);
-    data_vectors_initialized = true;
 }
 
 void update_statistics(std::vector<double> new_data)
@@ -104,9 +101,6 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
         while (true) {
             auto recvd = lfp_data.receive();
             // recvd has     uint32_t localTimestamp; std::vector< int16_t > lfpData; int64_t systemTimestamp;
-
-            if (!data_vectors_initialized)
-                initialize_vectors(recvd.lfpData.size());
 
             if (ripple_channels_changed) { // this is atomic
                 ripple_power->reset(ripple_channels);
@@ -167,14 +161,15 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
 
 }
 
-TrodesInterface::TrodesInterface(QObject *parent = nullptr, std::string server_address = "127.0.0.1", int server_port = 10000)
+TrodesInterface::TrodesInterface(QObject *parent = nullptr, std::string server_address = "127.0.0.1", int server_port = 10000, unsigned int num_channels = 1)
     : QObject{parent}
-    , server_address(server_address), server_port(server_port)
+    , server_address(server_address), server_port(server_port), nchan_lfp(num_channels)
 {
     // set up globals
     num_active_channels = 1; // default value is 1
     post_detection_delay = 0; 
-    data_vectors_initialized = false;
+    
+    initialize_vectors(nchan_lfp);
 }
 
 void TrodesInterface::run()

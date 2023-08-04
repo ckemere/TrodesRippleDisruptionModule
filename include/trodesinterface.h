@@ -24,7 +24,7 @@ public:
     enum TrodesNetworkStatus {not_connected, connected, streaming};
 
     // explicit TrodesInterface(QObject *parent = nullptr, std::string server_address, int server_port);
-    TrodesInterface(QObject *parent, std::string server_address, int server_port);
+    TrodesInterface(QObject *parent, std::string server_address, int server_port, unsigned int num_lfp_channels);
 
 public slots:
     void updateParameters();
@@ -62,6 +62,7 @@ private:
 
     ZmqSourceSubscriber<trodes::network::TrodesLFPData> *lfp;
 
+    unsigned int nchan_lfp;
     std::thread *lfp_thread;
     std::vector<unsigned int> ripple_channels;
 

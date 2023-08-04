@@ -17,7 +17,7 @@ StimInterface::StimInterface(QObject *parent = nullptr)
 void StimInterface::run()
 {
     socket = new QUdpSocket(); // This will be how we communicate with Raspberry Pi Stim server
-    socket->bind(QHostAddress::LocalHost, 7755);
+    socket->bind(QHostAddress::AnyIPv4, 7755);
 
     connect(socket, &QUdpSocket::readyRead, this, &StimInterface::readPendingDatagrams);
 
@@ -61,8 +61,10 @@ void StimInterface::stateMotivator()
 
 void StimInterface::checkServer()
 {
-    socket->writeDatagram("C", 2, server_address, server_port); // Send the C command to the server. This should trigger a reply.
+    qint64 ret = socket->writeDatagram("C", 2, server_address, server_port); // Send the C command to the server. This should trigger a reply.
     stateMotivatorTimer->start(500);
+    // qDebug() << "Sent a C command to " << server_address << "port " << server_port << "ret" << ret;
+    // qDebug() << "Error" << socket->error() << ". Error string" << socket->errorString();
 }
 
 void StimInterface::readPendingDatagrams()
