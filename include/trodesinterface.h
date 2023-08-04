@@ -32,7 +32,8 @@ public slots:
     void newRippleChannels(QList<unsigned int>);
     void run(void);
     
-    void startTraining(int numberOfTrainingSamples);
+    void startTraining(unsigned int numberOfTrainingSamples);
+    void enableStimulation(bool enable);
 
     void reportIFaceData();
 

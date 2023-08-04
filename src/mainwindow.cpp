@@ -104,7 +104,8 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
 
     ui->statusbar->showMessage("Establishing Trodes interface.");
-    on_raspberryPiLineEdit_editingFinished(); // updates trodes interface status
+
+    on_raspberryPiLineEdit_editingFinished(); // updates stim server interface status
 }
 
 MainWindow::~MainWindow()
@@ -312,23 +313,35 @@ void MainWindow::on_freezeSelectionButton_clicked()
 
 void MainWindow::on_trainLFPStatisticsButton_clicked() 
 {
-    int training_duration_samples = ui->trainingDurationSpinBox->value() * SAMPLES_PER_SECOND;
-    ui->trainingProgressBar->setRange(0, training_duration_samples);
-    emit startTraining(training_duration_samples);
-    qDebug() << "Start training!";
-    currentlyTraining = true;
+    if (currentlyTraining) {
+        int training_duration_samples = ui->trainingDurationSpinBox->value() * SAMPLES_PER_SECOND;
+        ui->trainingProgressBar->setRange(0, training_duration_samples);
+        emit startTraining(training_duration_samples);
+        qDebug() << "Start training!";
+        currentlyTraining = true;
+        ui->trainLFPStatisticsButton->setText("Abort Training");
+    }
+    else {
+        ui->trainingProgressBar->reset();
+        emit startTraining(0);
+        qDebug() << "Aborting training!";
+    }
 }
 
 void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_left)
 {
-    for (int i=0; i < means.size(); i++) {
-        nTrodeTableRows[i]->setParams(means[i],std::sqrt(vars[i]));
+    for (auto row : nTrodeTableRows) {
+        unsigned int ch = row->id_index;
+        row->setParams(means[ch], std::sqrt(vars[ch]));
     }
+
     qDebug() << "Got training update " << training_left;
     if (currentlyTraining) {
         ui->trainingProgressBar->setValue(training_left);
-        if (training_left == 0)
+        if ((training_left == 0) && currentlyTraining) {
             currentlyTraining = false;
+            ui->trainLFPStatisticsButton->setText("Train LFP Statistics");
+        }
     }
 }
 

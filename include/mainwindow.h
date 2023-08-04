@@ -76,7 +76,7 @@ signals:
     void testStimulation();
     void appClosing();
     void newRippleChannels(QList<unsigned int>);
-    void startTraining(int);
+    void startTraining(unsigned int);
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);

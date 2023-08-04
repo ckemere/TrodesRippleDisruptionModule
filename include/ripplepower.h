@@ -7,16 +7,16 @@
 class RipplePower
 {
 public:
-    RipplePower(std::vector<unsigned int>);
+    RipplePower(unsigned int);
     // ~RipplePower();
     void reset(std::vector<unsigned int>);
 
 public:
     void new_data(std::vector<int16_t> data);
-
     std::vector<double> output;
 
 private:
+    unsigned int input_length;
     std::vector<unsigned int> ripple_channels;
 };
 

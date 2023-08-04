@@ -74,16 +74,25 @@ double smoothing_filter_coefs[smoothing_filter_len] = {
     0.0203770957
 };
 
-double filter_circ_buffer[ripple_filter_len];
-double smoothing_circ_buffer[smoothing_filter_len];
+double **filter_circ_buffer;
+double **smoothing_circ_buffer;
 
 unsigned int fidx, sidx;
 
-RipplePower::RipplePower(std::vector<unsigned int> channels):
-    output(channels.size()), ripple_channels(channels)
+RipplePower::RipplePower(unsigned int num_channels):
+    output(num_channels), ripple_channels()
 {
-    memset(filter_circ_buffer, 0, ripple_filter_len*sizeof(double));
-    memset(smoothing_circ_buffer, 0, smoothing_filter_len*sizeof(double));
+    input_length = num_channels;
+
+    // Allocate a filtering circular buffer for each LFP channel. 
+    // For 16 tetrodes, this is something like 2 KB for each filter.
+    // It's a bit annoying as it will likely get dropped from cache, but I'm not sure how to help this.
+    for (int ch = 0; ch < num_channels; ch++) {
+        filter_circ_buffer[ch] = new double[ripple_filter_len];
+        smoothing_circ_buffer[ch] = new double[smoothing_filter_len];
+        memset(filter_circ_buffer[ch], 0, ripple_filter_len*sizeof(double));
+        memset(smoothing_circ_buffer[ch], 0, smoothing_filter_len*sizeof(double));
+    }
 
     fidx = 0;
     sidx = 0;
@@ -96,28 +105,25 @@ void RipplePower::reset(std::vector<unsigned int> chans) {
 
 void RipplePower::new_data(std::vector<int16_t> data)
 {
-    // for (unsigned int i=0; i < ripple_channels.size(); i++) {
-    //     output[i] = data[ripple_channels[i]];
-    // }
+    for (auto ch : ripple_channels) {
+        //     output[i] = data[ch];
 
-
-    for (unsigned int ch=0; ch < ripple_channels.size(); ch++) {
         int new_data_point = data[ripple_channels[ch]];
 
         // ripple filter
         double filter_output = 0;
-        filter_circ_buffer[fidx] = new_data_point;
+        filter_circ_buffer[ch][fidx] = new_data_point;
         for (unsigned int i=0; i < ripple_filter_len; i++) {
-            filter_output += ripple_filter_coefs[i] * filter_circ_buffer[fidx++];
+            filter_output += ripple_filter_coefs[i] * filter_circ_buffer[ch][fidx++];
             if (fidx == ripple_filter_len)
                 fidx = 0;
         }
-        fidx = fidx + 1;
 
+        // envelope filter
         double smoothing_output = 0;
-        smoothing_circ_buffer[sidx] = fabs(filter_output);
+        smoothing_circ_buffer[ch][sidx] = fabs(filter_output);
         for (unsigned int i=0; i < smoothing_filter_len; i++) {
-            smoothing_output += smoothing_filter_coefs[i] * smoothing_circ_buffer[sidx++];
+            smoothing_output += smoothing_filter_coefs[i] * smoothing_circ_buffer[ch][sidx++];
             if (sidx == smoothing_filter_len)
                 sidx = 0;
         }
@@ -125,5 +131,12 @@ void RipplePower::new_data(std::vector<int16_t> data)
         output[ch] = smoothing_output;
     }
 
-
+    // For each channel, we've cycled across the loop, ending where we began.
+    // Now we prepare for the next sample
+    fidx = fidx + 1;
+    if (fidx == ripple_filter_len)
+        fidx = 0;
+    sidx = sidx + 1;
+    if (sidx == smoothing_filter_len)
+        sidx = 0;
 }
