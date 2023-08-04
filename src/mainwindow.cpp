@@ -46,7 +46,8 @@ void TableRow::highlight(bool highlight)
 
 MainWindow::MainWindow(QWidget *parent, QStringList arguments)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    , ui(new Ui::MainWindow),
+    currentlyTraining(false), currentlyStimulating(false)
 {
     ui->setupUi(this);
     ui->rejectionParamsGroupBox->setEnabled(false);
@@ -95,13 +96,12 @@ MainWindow::MainWindow(QWidget *parent, QStringList arguments)
 
     ui->tableWidget->horizontalHeaderItem(0)->setText("NTrode\nId");
 
-    currentlyTraining = false;
     ui->trainingDurationSpinBox->setEnabled(false);
     ui->trainingDurationLabel->setEnabled(false);
     ui->trainingProgressBar->setEnabled(false);
     ui->trainingProgressLabel->setEnabled(false);
     ui->trainLFPStatisticsButton->setEnabled(false);
-
+    ui->enableStimulationButton->setEnabled(false);
 
     ui->statusbar->showMessage("Establishing Trodes interface.");
 
@@ -273,6 +273,7 @@ void MainWindow::on_freezeSelectionButton_clicked()
         ui->trainingProgressBar->setEnabled(false);
         ui->trainingProgressLabel->setEnabled(false);
         ui->trainLFPStatisticsButton->setEnabled(false);
+        ui->enableStimulationButton->setEnabled(false);
     }
     else {
         if (rippleNTrodeIndices.isEmpty()) {
@@ -341,6 +342,26 @@ void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<doubl
         if ((training_left == 0) && currentlyTraining) {
             currentlyTraining = false;
             ui->trainLFPStatisticsButton->setText("Train LFP Statistics");
+
+            // Once we've trained at least once, stimulation should be enabled
+            ui->enableStimulationButton->setEnabled(true);
+        }
+    }
+}
+
+void MainWindow::on_enableStimulationButton_clicked() 
+{
+    if (currentlyStimulating) {
+        emit enableStimulation(false);
+        ui->enableStimulationButton->setText("Enable Stimulation");
+        currentlyStimulating = true;
+    }
+    else {
+        // Should test for things like training, what else?
+        if (!currentlyTraining) {
+            emit enableStimulation(true);
+            ui->enableStimulationButton->setText("Stop Stimulation");
+            currentlyStimulating = true;
         }
     }
 }

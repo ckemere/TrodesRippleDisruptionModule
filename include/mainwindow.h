@@ -77,6 +77,7 @@ signals:
     void appClosing();
     void newRippleChannels(QList<unsigned int>);
     void startTraining(unsigned int);
+    void enableStimulation(bool);
 
 public slots:
     void networkStatusUpdate(TrodesInterface::TrodesNetworkStatus);
@@ -93,6 +94,7 @@ private slots:
     void on_raspberryPiLineEdit_editingFinished();
     void on_testStimButton_clicked();
     void on_trainLFPStatisticsButton_clicked();
+    void on_enableStimulationButton_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -109,6 +111,7 @@ private:
     QMessageBox *startupErrorMsgBox;
 
     bool currentlyTraining;
+    bool currentlyStimulating;
 
 };
 #endif // MAINWINDOW_H
