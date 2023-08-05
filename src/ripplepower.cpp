@@ -83,7 +83,7 @@ unsigned int fidx, sidx;
 RipplePower::RipplePower(unsigned int num_channels):
     output(num_channels)
 {
-    input_length = num_channels;
+    input_length = num_channels; // total number of channels being streamed
 
     // Allocate a filtering circular buffer for each LFP channel. 
     // For 16 tetrodes, this is something like 2 KB for each filter.
@@ -91,7 +91,7 @@ RipplePower::RipplePower(unsigned int num_channels):
     filter_circ_buffer = new double* [num_channels];
     smoothing_circ_buffer = new double* [num_channels];
     
-    for (int ch = 0; ch < num_channels; ch++) {
+    for (unsigned int ch = 0; ch < num_channels; ch++) {
         filter_circ_buffer[ch] = new double[ripple_filter_len];
         smoothing_circ_buffer[ch] = new double[smoothing_filter_len];
         memset(filter_circ_buffer[ch], 0, ripple_filter_len*sizeof(double));
@@ -103,16 +103,22 @@ RipplePower::RipplePower(unsigned int num_channels):
 }
 
 void RipplePower::reset(std::vector<unsigned int> chans) {
-    ripple_channels = chans;
-    output.resize(chans.size());
+    filter_chans = chans;
+    std::cerr << "Ripple channels" << filter_chans.size() << ",";
+    for (int i = 0; i < filter_chans.size(); i++)
+        std::cerr << " " << filter_chans[i];
+    std::cerr << "." << std::endl;
 }
 
 void RipplePower::new_data(std::vector<int16_t> data)
 {
-    for (auto ch : ripple_channels) {
-        //     output[i] = data[ch];
+    // for (int i = 0; i < data.size(); i++)
+    //     output[i] = data[i];
+        
+    for (auto ch : filter_chans) {
+            // output[ch] = data[ch];
 
-        int new_data_point = data[ripple_channels[ch]];
+        int new_data_point = data[ch];
 
         // ripple filter
         double filter_output = 0;

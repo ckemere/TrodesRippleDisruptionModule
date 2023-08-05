@@ -17,7 +17,7 @@ public:
 
 private:
     unsigned int input_length;
-    std::vector<unsigned int> ripple_channels;
+    std::vector<unsigned int> filter_chans;
 };
 
 #endif // RIPPLEFILTER_H

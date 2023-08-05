@@ -15,6 +15,8 @@
 
 #include <thread>
 
+#include "moduledefines.h"
+
 
 class TrodesInterface : public QObject
 {
@@ -27,7 +29,7 @@ public:
     TrodesInterface(QObject *parent, std::string server_address, int server_port, unsigned int num_lfp_channels);
 
 public slots:
-    void updateParameters();
+    void updateParameters(RippleParameters);
     void updateNetworkStatus();
     void newRippleChannels(QList<unsigned int>);
     void run(void);
@@ -47,7 +49,7 @@ signals:
     void parametersUpdated(void);
     void finished();
     void error(QString err);
-    void newTrainingStats(std::vector<double>, std::vector<double>, int);
+    void newTrainingStats(std::vector<double>, std::vector<double>, int, double);
 
 private:
     TrodesNetworkStatus currentNetworkStatus;
@@ -64,7 +66,6 @@ private:
 
     unsigned int nchan_lfp;
     std::thread *lfp_thread;
-    std::vector<unsigned int> ripple_channels;
 
     QTimer *ifaceUpdateTimer;
 

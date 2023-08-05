@@ -31,12 +31,15 @@
 // Status
 std::atomic<TrodesInterface::TrodesNetworkStatus> trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::not_connected;
 
-// Ripple detetection parameters 
-std::atomic<double> ripple_threshold;
-std::atomic<unsigned int> num_active_channels;
-std::atomic<double> minimum_ripple_isi;
-std::atomic<double> minimum_ripple_average_isi;
-std::atomic<int> post_detection_delay; // in samples
+// Ripple detetection parameters
+std::mutex parameters_lock;
+double ripple_threshold = 3.0;
+unsigned int num_active_channels = 1;
+double minimum_stim_isi;
+double minimum_stim_average_isi;
+bool post_detection_delay;
+
+// std::atomic<int> post_detection_delay; // in samples
 std::atomic<bool> stimulation_enabled;
 
 
@@ -79,9 +82,10 @@ void update_statistics(std::vector<double> new_data)
     // This is called inside a mutex, so it should be protected
     training_sample_count++;
     for (auto ch : ripple_channels) {
+    // https://math.stackexchange.com/questions/374881/recursive-formula-for-variance
         old_mean_sq = means[ch]*means[ch];
         means[ch] = means[ch] + (new_data[ch] - means[ch]) / training_sample_count;
-        vars[ch] = vars[ch] + means[ch]*means[ch] - old_mean_sq + (new_data[ch]*new_data[ch] - vars[ch] - old_mean_sq)/training_sample_count;
+        vars[ch] = vars[ch] + old_mean_sq - means[ch]*means[ch] + (new_data[ch]*new_data[ch] - vars[ch] - old_mean_sq)/training_sample_count;
     }
 }
 
@@ -95,6 +99,8 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
         ZmqSourceSubscriber<trodes::network::TrodesLFPData> lfp_data(endpoint);
         std::cerr << "Established connection to LFP data endpoint" << endpoint << std::endl;
 
+        trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::streaming;
+
         std::stringstream result;
 
         long int data_count = 0;
@@ -103,7 +109,14 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
             // recvd has     uint32_t localTimestamp; std::vector< int16_t > lfpData; int64_t systemTimestamp;
 
             if (ripple_channels_changed) { // this is atomic
+                std::cerr << "Ripple channels size " << ripple_channels.size() << std::endl;
                 ripple_power->reset(ripple_channels);
+                statistics_lock.lock();
+                for (auto ch : ripple_channels) {
+                    means[ch] = 0;
+                    vars[ch] = 0;
+                }
+                statistics_lock.unlock();
                 ripple_channels_changed = false; // this is atomic
             }
 
@@ -129,25 +142,39 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
             if (stimulation_enabled) {
                 current_isi++; // incremement time since last stimulation
 
-                int stimulation_vote = 0;
+                double norm_power;
+                double max_norm_power = -100;
+                unsigned int stimulation_vote = 0;
+                parameters_lock.lock(); // we're going to access the parameters in a second. protect with mutex
                 for (auto ch : ripple_channels) {
-                    double norm_power = (ripple_power->output[ch] - means[ch])/std_devs[ch];
-                    if (norm_power > ripple_threshold)
+                    norm_power = (ripple_power->output[ch] - means[ch])/std_devs[ch];
+                    if (norm_power > ripple_threshold) {
                         stimulation_vote++;
+                        max_norm_power = std::max(max_norm_power, norm_power);
+                    }
                 }
 
-                if ((stimulation_vote >= num_active_channels) || // Did vote succeed?
-                    // STIMULATE HERE
+                if ((stimulation_vote >= num_active_channels) && // Did vote succeed?
+                    (current_isi > minimum_stim_isi) && // Are we more than our minimum inter-stim difference?
+                    ((current_isi + isi_sum) / 9 > minimum_stim_average_isi)) {// Are we going to make our average stim rate too high?
 
-                    (current_isi > minimum_ripple_isi) || // Are we more than our minimum inter-stim difference?
-                    ((current_isi + isi_sum) / 9 > minimum_ripple_average_isi)) {// Are we going to make our average stim rate too high?
-               
+                    if (!post_detection_delay) {
+                        // STIMULATE HERE
+                        std::cerr << "STIMULATE " << max_norm_power << std::endl;
+
+                    }
+                    else {
+                        // DO _CONTROL_STIMULATION
+                        std::cerr << "STIMULATE " << max_norm_power << std::endl;
+                    }
+
                     isi_sum = isi_sum - inter_stim_intervals[isi_idx];
                     inter_stim_intervals[isi_idx] = current_isi;
                     isi_idx = (isi_idx + 1) & 0x7; // I know that the array is size 8
                     isi_sum = isi_sum + current_isi;
                     current_isi = 0;
                 }
+                parameters_lock.unlock(); // unlock mutex
             }
             
 
@@ -277,6 +304,8 @@ void TrodesInterface::acq_activity()
                 else if (msg.command == "stop") { // Streaming is beginning
                     // this will block, but I think that's ok?
                     delete lfp_thread; // have we leaked anything?
+                    trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::connected;
+
                 }
                 // probably emit something here
             }
@@ -284,10 +313,29 @@ void TrodesInterface::acq_activity()
     }
 }
 
-void TrodesInterface::updateParameters()
-{
-    qDebug() << "Got new params! " << QThread::currentThreadId();
+/*
+struct RippleParameters {
+    double ripple_threshold;
+    unsigned int num_active_channels;
+    unsigned int minimum_stim_isi; // in samples
+    unsigned int minimum_stim_average_isi; // in samples
+    bool post_detection_delay; 
+}
+*/
 
+void TrodesInterface::updateParameters(RippleParameters new_params)
+{
+    parameters_lock.lock();
+    ripple_threshold = new_params.ripple_threshold;
+    num_active_channels = new_params.num_active_channels;
+    minimum_stim_isi = new_params.minimum_stim_isi;
+    minimum_stim_average_isi = new_params.minimum_stim_average_isi;
+    post_detection_delay = new_params.post_detection_delay;
+    parameters_lock.unlock();
+    qDebug() << "Got new params! " << new_params.ripple_threshold << " " 
+                                << new_params.num_active_channels << " " 
+                                << new_params.minimum_stim_isi << " " 
+                                << new_params.minimum_stim_average_isi;
     emit parametersUpdated();
 }
 
@@ -315,22 +363,16 @@ void TrodesInterface::updateNetworkStatus()
     emit networkStatus(currentNetworkStatus);
 }
 
-void TrodesInterface::newRippleChannels(QList<unsigned int> channels)
+void TrodesInterface::newRippleChannels(QList<unsigned int> rip_chans)
 {
-
     // TODO - this needs to reshape the ripple structure in the other thread!
     // It won't necessarily be done until after streaming has started.
-
-    foreach(auto &x,channels)
-        qDebug()<<x;
-
     statistics_lock.lock();
-    ripple_channels = std::vector<unsigned int>(channels.begin(), channels.end()); // copy a qlist to a std::vector
+    ripple_channels.resize(rip_chans.size());
+    for (unsigned int i = 0; i < rip_chans.size(); i++)
+        ripple_channels[i] = rip_chans[i];
     ripple_channels_changed = true;
     statistics_lock.unlock();
-
-    qDebug() << "updated ripple channels ";
-
 }
 
 void TrodesInterface::startTraining(unsigned int new_training_duration)
@@ -361,6 +403,6 @@ void TrodesInterface::startTraining(unsigned int new_training_duration)
 void TrodesInterface::reportIFaceData()
 {
     statistics_lock.lock();
-    emit newTrainingStats(means, vars, training_duration);
+    emit newTrainingStats(means, vars, training_duration, SAMPLES_PER_SECOND * 8.0 / isi_sum);
     statistics_lock.unlock();
 }

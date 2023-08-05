@@ -17,8 +17,7 @@ public:
       socket_(ctx_, zmq::socket_type::sub)
     {
         socket_.connect(endpoint.c_str());
-        std::string filter = "";
-        socket_.setsockopt(ZMQ_SUBSCRIBE, filter.c_str(), filter.length());
+        socket_.set(zmq::sockopt::subscribe, "");
     }
 
     ~ZmqSourceSubscriber() {

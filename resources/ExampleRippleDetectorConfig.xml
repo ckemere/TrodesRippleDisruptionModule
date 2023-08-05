@@ -7,7 +7,7 @@
  <BenchmarkConfiguration/>
  <NetworkConfiguration networkType="zmq" trodesHost="127.0.0.1" trodesPort="10000"/>
 
- <HardwareConfiguration samplingRate="30000" lfpSubsamplingInterval="20" useIntrinsics="1" numChannels="64">
+ <HardwareConfiguration samplingRate="30000" lfpSubsamplingInterval="20" useIntrinsics="1" numChannels="32">
    <Device name="OpenEphys" packetOrderPreference="10" numBytes = "21" available="1"> <!-- num bytes should be n+1 -->
       <Channel id="Din1" dataType="digital" startByte="0" bit="0" />
       <Channel id="Din2" dataType="digital" startByte="0" bit="1" />

@@ -3,6 +3,7 @@
 
 #include "trodesinterface.h"
 #include "stiminterface.h"
+#include "moduledefines.h"
 
 
 #include <QMainWindow>
@@ -66,12 +67,13 @@ public:
     void redrawNTrodeTable(QList<unsigned int> order = QList<unsigned int>());
 
 signals:
-    void updateParametersButton_clicked();
+    // void updateParametersButton_clicked();
     void updatedStimServerUrl(QString, quint16);
     void testStimulation();
     void appClosing();
     void newRippleChannels(QList<unsigned int>);
     void startTraining(unsigned int);
+    void newParameters(RippleParameters);
     void enableStimulation(bool);
 
 public slots:
@@ -79,13 +81,21 @@ public slots:
     void stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus);
     void closeEvent(QCloseEvent *event);
 
-    void newRipplePowerData(std::vector<double>, std::vector<double>, int);
+    void newRipplePowerData(std::vector<double>, std::vector<double>, int, double);
 
 private slots:
+    void on_rippleThreshold_valueChanged(double newValue);
+    void on_numActiveChannels_valueChanged(int newValue);
+    void on_minInterStim_valueChanged(double newValue);
+    void on_maxStimRate_valueChanged(double newValue);
+    void on_controlStimulationCheckBox_stateChanged(int state);
+    void newParametersNotUpdated(void);
     void on_updateParametersButton_clicked();
+    void reflectParametersUpdated();
+
     void on_tableWidget_cellClicked(int row, int column);
     void on_freezeSelectionButton_clicked();
-    void reflectParametersUpdated();
+
     void on_raspberryPiLineEdit_editingFinished();
     void on_testStimButton_clicked();
     void on_trainLFPStatisticsButton_clicked();
@@ -93,7 +103,9 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    // int numNTrodes;
+    
+    TrodesInterface::TrodesNetworkStatus trodesNetworkStatus;
+
     QList<int> nTrodeIds; // loaded from config file
     bool nTrodeTableFrozen = false;
 

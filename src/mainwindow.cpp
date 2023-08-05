@@ -46,8 +46,9 @@ void TableRow::highlight(bool highlight)
 
 MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow), nTrodeIds(nTrodeIds), 
-    currentlyTraining(false), currentlyStimulating(false)
+    , ui(new Ui::MainWindow), nTrodeIds(nTrodeIds)
+    , trodesNetworkStatus(TrodesInterface::TrodesNetworkStatus::not_connected)
+    , currentlyTraining(false), currentlyStimulating(false)
 {
     ui->setupUi(this);
     ui->rejectionParamsGroupBox->setEnabled(false);
@@ -63,44 +64,27 @@ MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
     ui->trainLFPStatisticsButton->setEnabled(false);
     ui->enableStimulationButton->setEnabled(false);
 
+    ui->rippleParamGroupBox->setEnabled(false);
+    ui->stimParamsGroupBox->setEnabled(false);
+
+    ui->rippleThreshold->setValue(DEFAULT_RIPPLE_THRESHOLD);
+    ui->numActiveChannels->setValue(DEFAULT_NUM_ACTIVE_CHANNELS);
+    ui->minInterStim->setValue(DEFAULT_MINIMUM_STIM_ISI);
+    ui->maxStimRate->setValue(DEFAULT_MAXIMUM_STIM_RATE);
+    
     ui->statusbar->showMessage("Establishing Trodes interface.");
 
     on_raspberryPiLineEdit_editingFinished(); // updates stim server interface status
 }
+
+
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-void MainWindow::on_updateParametersButton_clicked()
-{
-    qDebug() << "Update parameters clicked! From thread " << QThread::currentThreadId();
-    ui->updateParametersButton->setEnabled(false);
-    emit updateParametersButton_clicked();
-}
-
-void MainWindow::reflectParametersUpdated()
-{
-    qDebug() << "Received response";
-    ui->updateParametersButton->setEnabled(true);
-}
-
-void MainWindow::networkStatusUpdate(TrodesInterface::TrodesNetworkStatus status)
-{
-    switch (status){
-        case TrodesInterface::TrodesNetworkStatus::not_connected:
-            ui->statusbar->showMessage("Still waiting on Trodes interface.");
-            break;
-        case TrodesInterface::TrodesNetworkStatus::connected:
-            ui->statusbar->showMessage("Trodes interface connected.");
-            break;
-        case TrodesInterface::TrodesNetworkStatus::streaming:
-            ui->statusbar->showMessage("Streaming data.");
-            break;
-    }
-}
-
+/* ================================================================================== */
 /* Code related to stimulation server */
 
 void MainWindow::on_raspberryPiLineEdit_editingFinished() {
@@ -163,11 +147,92 @@ void MainWindow::stimServerStatusUpdate(StimInterface::StimIFaceStatus newStatus
     ui->raspberryPiLineEdit->setPalette(palette);
 }
 
+
+
 void MainWindow::on_testStimButton_clicked()
 {
     emit testStimulation();
 }
 
+/* ================================================================================== */
+/* Code related to Trodes Interface */
+
+void MainWindow::networkStatusUpdate(TrodesInterface::TrodesNetworkStatus status)
+{
+    switch (status){
+        case TrodesInterface::TrodesNetworkStatus::not_connected:
+            ui->statusbar->showMessage("Still waiting on Trodes interface.");
+            break;
+        case TrodesInterface::TrodesNetworkStatus::connected:
+            ui->statusbar->showMessage("Trodes interface connected.");
+            break;
+        case TrodesInterface::TrodesNetworkStatus::streaming:
+            ui->statusbar->showMessage("Streaming data.");
+            if (trodesNetworkStatus != TrodesInterface::TrodesNetworkStatus::streaming) {
+                ui->rippleParamGroupBox->setEnabled(true);
+                ui->stimParamsGroupBox->setEnabled(true);
+                // Send updated parameters
+                on_updateParametersButton_clicked();
+            }            
+            break;
+    }
+    trodesNetworkStatus = status;
+}
+
+
+void MainWindow::on_rippleThreshold_valueChanged(double newValue) {
+    newParametersNotUpdated();
+}
+
+void MainWindow::on_numActiveChannels_valueChanged(int newValue) {
+    newParametersNotUpdated();    
+}
+
+void MainWindow::on_minInterStim_valueChanged(double newValue) {
+    newParametersNotUpdated();  
+}
+
+void MainWindow::on_maxStimRate_valueChanged(double newValue) {
+    newParametersNotUpdated();   
+}
+
+void MainWindow::on_controlStimulationCheckBox_stateChanged(int state) {
+    newParametersNotUpdated();   
+}
+
+void MainWindow::newParametersNotUpdated(void) {
+    ui->rippleParamGroupBox->setStyleSheet("background-color: pink");
+    ui->updateParametersButton->setEnabled(true);
+}
+
+void MainWindow::on_updateParametersButton_clicked()
+{
+    /*
+    struct RippleParameters {
+        double ripple_threshold;
+        unsigned int num_active_channels;
+        double minimum_ripple_isi; // in samples
+        double minimum_ripple_average_isi; // in samples
+        bool post_detection_delay; 
+    }
+    */
+
+    RippleParameters newParams = {ui->rippleThreshold->value(),
+                                  (unsigned int)  ui->numActiveChannels->value(), 
+                                  (unsigned int) (ui->minInterStim->value() * SAMPLES_PER_SECOND / 1000), // convert to samples from ms
+                                  (unsigned int) (1 / ui->maxStimRate->value() * SAMPLES_PER_SECOND), // convert to samples from rate
+                                  ui->controlStimulationCheckBox->checkState() == Qt::Checked};
+    emit newParameters(newParams);
+    qDebug() << "Update parameters clicked! From thread " << QThread::currentThreadId();
+    ui->updateParametersButton->setEnabled(false);
+    ui->rippleParamGroupBox->setStyleSheet("");
+}
+
+void MainWindow::reflectParametersUpdated()
+{
+    qDebug() << "Received response";
+    ui->updateParametersButton->setEnabled(true);
+}
 
 /* Code related to the NTrode Selection Process*/
 
@@ -259,7 +324,6 @@ void MainWindow::on_freezeSelectionButton_clicked()
             nTrodeTableFrozen = true;
 
             emit newRippleChannels(rippleNTrodeIndices);
-            qDebug() << "Emitted newRippleChannels";
 
             ui->trainingDurationSpinBox->setEnabled(true);
             ui->trainingDurationLabel->setEnabled(true);
@@ -289,14 +353,16 @@ void MainWindow::on_trainLFPStatisticsButton_clicked()
     }
 }
 
-void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_left)
+void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<double> vars, int training_left, double stim_isi)
 {
     for (auto row : nTrodeTableRows) {
         unsigned int ch = row->id_index;
         row->setParams(means[ch], std::sqrt(vars[ch]));
+        // row->setParams(means[ch], vars[ch]);
+        // qDebug() << means[ch] << " "<< vars[ch];
     }
 
-    qDebug() << "Got training update " << training_left;
+    // qDebug() << "Got training update " << training_left;
     if (currentlyTraining) {
         ui->trainingProgressBar->setValue(training_left);
         if ((training_left == 0) && currentlyTraining) {
@@ -307,6 +373,10 @@ void MainWindow::newRipplePowerData(std::vector<double> means, std::vector<doubl
             ui->enableStimulationButton->setEnabled(true);
         }
     }
+    else {
+        if (currentlyStimulating)
+            ui->rippleRateLabel->setText(QString::number(stim_isi));
+    }
 }
 
 void MainWindow::on_enableStimulationButton_clicked() 
@@ -314,7 +384,7 @@ void MainWindow::on_enableStimulationButton_clicked()
     if (currentlyStimulating) {
         emit enableStimulation(false);
         ui->enableStimulationButton->setText("Enable Stimulation");
-        currentlyStimulating = true;
+        currentlyStimulating = false;
     }
     else {
         // Should test for things like training, what else?

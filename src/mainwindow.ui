@@ -150,6 +150,7 @@
          <property name="title">
           <string>Ripple Detection Parameters</string>
          </property>
+
          <layout class="QFormLayout" name="formLayout_2">
           <item row="0" column="0">
            <widget class="QLabel" name="label">
@@ -164,7 +165,8 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
+           <widget class="QDoubleSpinBox" name="rippleThreshold">
+           </widget>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_2">
@@ -174,11 +176,65 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QSpinBox" name="spinBox"/>
+           <widget class="QSpinBox" name="numActiveChannels">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>Min Inter-Stim (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QDoubleSpinBox" name="minInterStim">
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
+            <property name="maximum">
+             <double>100000.0</double>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Max Stim Rate (Hz)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="maxStimRate">
+            <property name="minimum">
+             <double>0</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>Instantaneous Ripple Rate</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLabel" name="rippleRateLabel"/>
+          </item>
+          <item row="5" column="1" colspan="2">
+            <widget class="QPushButton" name="updateParametersButton">
+             <property name="text">
+              <string>Update Parameters</string>
+             </property>
+            </widget>
           </item>
          </layout>
         </widget>
        </item>
+
        <item>
         <widget class="QGroupBox" name="rejectionParamsGroupBox">
          <property name="title">
@@ -217,7 +273,7 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_3"/>
+           <widget class="QDoubleSpinBox" name="noiseThreshold"/>
           </item>
           <item row="4" column="0">
            <widget class="QLabel" name="label_5">
@@ -227,7 +283,8 @@
            </widget>
           </item>
           <item row="4" column="1">
-           <widget class="QSpinBox" name="spinBox_2"/>
+           <widget class="QSpinBox" name="noiseActiveChannels">
+           </widget>
           </item>
          </layout>
         </widget>
@@ -238,15 +295,12 @@
           <string>Special Stimulation Parameters</string>
          </property>
          <layout class="QFormLayout" name="formLayout_4">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_6">
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="controlStimulationCheckBox">
             <property name="text">
-             <string>Control Post Detection Delay</string>
+             <string>Trigger ~200 ms Post Detection Delay Stimulation</string>
             </property>
            </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_4"/>
           </item>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_3">
@@ -266,13 +320,6 @@
            <widget class="QDoubleSpinBox" name="doubleSpinBox_5"/>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="updateParametersButton">
-         <property name="text">
-          <string>Update Parameters</string>
-         </property>
         </widget>
        </item>
        <item>
