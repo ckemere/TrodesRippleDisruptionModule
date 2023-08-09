@@ -116,7 +116,7 @@ void RipplePower::new_data(std::vector<int16_t> data)
     //     output[i] = data[i];
         
     for (auto ch : filter_chans) {
-            // output[ch] = data[ch];
+        output[ch] = data[ch]; // testing latency
 
         int new_data_point = data[ch];
 
@@ -138,7 +138,7 @@ void RipplePower::new_data(std::vector<int16_t> data)
                 sidx = 0;
         }
 
-        output[ch] = smoothing_output;
+        // output[ch] = smoothing_output;
     }
 
     // For each channel, we've cycled across the loop, ending where we began.

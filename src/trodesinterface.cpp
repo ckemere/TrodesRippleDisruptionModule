@@ -86,6 +86,9 @@ void update_statistics(std::vector<double> new_data)
         old_mean_sq = means[ch]*means[ch];
         means[ch] = means[ch] + (new_data[ch] - means[ch]) / training_sample_count;
         vars[ch] = vars[ch] + old_mean_sq - means[ch]*means[ch] + (new_data[ch]*new_data[ch] - vars[ch] - old_mean_sq)/training_sample_count;
+        // for testing:
+        // means[ch] = 0; 
+        // vars[ch] = 1;
     }
 }
 
@@ -94,6 +97,23 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
 
     trodes_network = new std::thread([endpoint = lfp_pub_endpoint]() {
         
+        int sockfd;
+        const char *trigger_cmd = "T0";
+        const char *status_cmd = "C0";
+        struct sockaddr_in servaddr;
+
+        if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            std::cerr << "Failure opening socket to stim server.";
+        }
+
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port = htons(20782);
+        servaddr.sin_addr.s_addr = inet_addr("192.168.0.1");
+
+        sendto(sockfd, status_cmd, strlen(status_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+
+
         std::cerr << "Trodes lfp thread starting";
 
         ZmqSourceSubscriber<trodes::network::TrodesLFPData> lfp_data(endpoint);
@@ -160,6 +180,8 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
 
                     if (!post_detection_delay) {
                         // STIMULATE HERE
+                        sendto(sockfd, trigger_cmd, strlen(trigger_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+                        
                         std::cerr << "STIMULATE " << max_norm_power << std::endl;
 
                     }
