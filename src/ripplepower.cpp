@@ -112,6 +112,7 @@ void RipplePower::reset(std::vector<unsigned int> chans) {
 
 void RipplePower::new_data(std::vector<int16_t> data)
 {
+    /* For testing - just copy input to output! */
     // for (int i = 0; i < data.size(); i++)
     //     output[i] = data[i];
         
@@ -138,7 +139,7 @@ void RipplePower::new_data(std::vector<int16_t> data)
                 sidx = 0;
         }
 
-        // output[ch] = smoothing_output;
+        output[ch] = smoothing_output;
     }
 
     // For each channel, we've cycled across the loop, ending where we began.
