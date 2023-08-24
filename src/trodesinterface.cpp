@@ -86,9 +86,6 @@ void update_statistics(std::vector<double> new_data)
         old_mean_sq = means[ch]*means[ch];
         means[ch] = means[ch] + (new_data[ch] - means[ch]) / training_sample_count;
         vars[ch] = vars[ch] + old_mean_sq - means[ch]*means[ch] + (new_data[ch]*new_data[ch] - vars[ch] - old_mean_sq)/training_sample_count;
-        // for testing:
-        // means[ch] = 0; 
-        // vars[ch] = 1;
     }
 }
 
@@ -97,6 +94,9 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
 
     trodes_network = new std::thread([endpoint = lfp_pub_endpoint]() {
         
+
+        /* In this thread, estabish a connection to the stim interface */
+        // TODO - send the address and port over as part of starting this thread!
         int sockfd;
         const char *trigger_cmd = "T0";
         const char *status_cmd = "C0";
@@ -112,6 +112,7 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
         servaddr.sin_addr.s_addr = inet_addr("192.168.0.1");
 
         sendto(sockfd, status_cmd, strlen(status_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+        // TODO : Validate that there's a response - maybe loop here until that happens????
 
 
         std::cerr << "Trodes lfp thread starting";
@@ -181,13 +182,14 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
                     if (!post_detection_delay) {
                         // STIMULATE HERE
                         sendto(sockfd, trigger_cmd, strlen(trigger_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+                        // TODO - verify response?
                         
                         std::cerr << "STIMULATE " << max_norm_power << std::endl;
 
                     }
                     else {
-                        // DO _CONTROL_STIMULATION
-                        std::cerr << "STIMULATE " << max_norm_power << std::endl;
+                        // TODO - IMPLEMENT CONTROL_STIMULATION
+                        std::cerr << "CONTROL STIMULATE " << max_norm_power << std::endl;
                     }
 
                     isi_sum = isi_sum - inter_stim_intervals[isi_idx];
