@@ -42,6 +42,8 @@ public slots:
     void sstatus_activity();
     void acq_activity();
 
+    void stimServerUpdated(QString, quint16);
+
     void finish();
 
 signals:

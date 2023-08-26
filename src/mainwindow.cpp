@@ -74,6 +74,8 @@ MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
     
     ui->statusbar->showMessage("Establishing Trodes interface.");
 
+    ui->raspberryPiLineEdit->setText(QString("udp://%1:%2").arg(DEFAULT_STIM_SERVER_ADDRESS, QString::number(DEFAULT_STIM_SERVER_PORT)));
+
     on_raspberryPiLineEdit_editingFinished(); // updates stim server interface status
 }
 

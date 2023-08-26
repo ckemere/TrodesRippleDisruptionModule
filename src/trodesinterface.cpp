@@ -1,6 +1,7 @@
 #include "trodesinterface.h"
 #include "ripplepower.h"
 #include "moduledefines.h"
+#include "stiminterface.h"
 
 #include <TrodesNetwork/Connection.h>
 #include <TrodesNetwork/Generated/AcquisitionCommand.h>
@@ -27,6 +28,12 @@
 
 
 // Global variables for communicating between TrodesNet thread and QT
+
+// Stimulation server address
+struct sockaddr_in stimserver_addr;
+bool stimserver_addr_initialized;
+std::mutex stim_server_addr_lock;
+
 
 // Status
 std::atomic<TrodesInterface::TrodesNetworkStatus> trodesNetworkStatus = TrodesInterface::TrodesNetworkStatus::not_connected;
@@ -98,22 +105,13 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
         /* In this thread, estabish a connection to the stim interface */
         // TODO - send the address and port over as part of starting this thread!
         int sockfd;
-        const char *trigger_cmd = "T0";
-        const char *status_cmd = "C0";
-        struct sockaddr_in servaddr;
+        const char *regular_stim_cmd = "T0";
+        const char *delay_stim_cmd = "D0";
+
 
         if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             std::cerr << "Failure opening socket to stim server.";
         }
-
-        memset(&servaddr, 0, sizeof(servaddr));
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(20782);
-        servaddr.sin_addr.s_addr = inet_addr("192.168.0.1");
-
-        sendto(sockfd, status_cmd, strlen(status_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
-        // TODO : Validate that there's a response - maybe loop here until that happens????
-
 
         std::cerr << "Trodes lfp thread starting";
 
@@ -181,14 +179,15 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
 
                     if (!post_detection_delay) {
                         // STIMULATE HERE
-                        sendto(sockfd, trigger_cmd, strlen(trigger_cmd), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+                        sendto(sockfd, regular_stim_cmd, strlen(regular_stim_cmd), 0, (const struct sockaddr *)&stimserver_addr, sizeof(stimserver_addr));
                         // TODO - verify response?
                         
                         std::cerr << "STIMULATE " << max_norm_power << std::endl;
 
                     }
                     else {
-                        // TODO - IMPLEMENT CONTROL_STIMULATION
+                        sendto(sockfd, delay_stim_cmd, strlen(delay_stim_cmd), 0, (const struct sockaddr *)&stimserver_addr, sizeof(stimserver_addr));
+                        // TODO - verify response?
                         std::cerr << "CONTROL STIMULATE " << max_norm_power << std::endl;
                     }
 
@@ -219,6 +218,12 @@ TrodesInterface::TrodesInterface(QObject *parent = nullptr, std::string server_a
     // set up globals
     num_active_channels = 1; // default value is 1
     post_detection_delay = 0; 
+
+    stimserver_addr_initialized = false;
+    memset(&stimserver_addr, 0, sizeof(stimserver_addr));
+    stimserver_addr.sin_family = AF_INET;
+    stimserver_addr.sin_port = htons(DEFAULT_STIM_SERVER_PORT);
+    stimserver_addr.sin_addr.s_addr = inet_addr(DEFAULT_STIM_SERVER_ADDRESS);
     
     initialize_vectors(nchan_lfp);
 }
@@ -429,4 +434,18 @@ void TrodesInterface::reportIFaceData()
     statistics_lock.lock();
     emit newTrainingStats(means, vars, training_duration, SAMPLES_PER_SECOND * 8.0 / isi_sum);
     statistics_lock.unlock();
+}
+
+void TrodesInterface::stimServerUpdated(QString new_address, quint16 new_port)
+{
+    // Update address and port to which the stim pulse command will be sent.
+
+    // We don't need to double check because this signal has been emitted only after
+    //  the address was validated...
+    // sendto(sockfd, status_cmd, strlen(status_cmd), 0, (const struct sockaddr *)&stimserver_addr, sizeof(stimserver_addr));
+
+    stim_server_addr_lock.lock();
+    stimserver_addr.sin_port = htons(DEFAULT_STIM_SERVER_PORT);
+    stimserver_addr.sin_addr.s_addr = inet_addr(DEFAULT_STIM_SERVER_ADDRESS);
+    stim_server_addr_lock.unlock();
 }

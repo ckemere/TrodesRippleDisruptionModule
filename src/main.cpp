@@ -90,27 +90,28 @@ int main(int argc, char *argv[])
     QObject::connect(&w, &MainWindow::startTraining, &trodesInterface, &TrodesInterface::startTraining);
     QObject::connect(&w, &MainWindow::enableStimulation, &trodesInterface, &TrodesInterface::enableStimulation);
     
-    // QObject::connect(&w, &MainWindow::newRippleChannels, &trodesInterface, &TrodesInterface::newRippleChannels, Qt::QueuedConnection);
-
-    QTimer statusUpdateTimer;
-    QObject::connect(&statusUpdateTimer, SIGNAL(timeout()), &trodesInterface, SLOT(updateNetworkStatus()));
-    statusUpdateTimer.start(250);
-    interface_thread->start();
-
 
     StimInterface stimInterface(nullptr);
     QThread* stim_thread = new QThread;
     stimInterface.moveToThread(stim_thread);
-    // connect(trodesInterface, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
     QObject::connect(stim_thread, SIGNAL(started()), &stimInterface, SLOT(run()));
-    // QObject::connect(&stimInterface, SIGNAL(finished()), stim_thread, SLOT(quit()));
-    // QObject::connect(&stimInterface, SIGNAL(finished()), &stimInterface, SLOT(deleteLater()));
-    // QObject::connect(stim_thread, SIGNAL(finished()), stim_thread, SLOT(deleteLater()));
 
     // QObject::connect(&w, SIGNAL(updateParametersButton_clicked()), &stimInterface, SLOT(updateParameters()));
     QObject::connect(&stimInterface, &StimInterface::stimStatusUpdate, &w, &MainWindow::stimServerStatusUpdate);
     QObject::connect(&w, &MainWindow::updatedStimServerUrl, &stimInterface, &StimInterface::updateAddress);
     QObject::connect(&w, &MainWindow::testStimulation, &stimInterface, &StimInterface::testStimulation);
+
+    QObject::connect(&stimInterface, &StimInterface::stimServerUpdated, &trodesInterface, &TrodesInterface::stimServerUpdated);
+
+
+    // Start TrodesInterface hread
+    QTimer statusUpdateTimer; // Timer that periodically checks whether the system can connect
+    QObject::connect(&statusUpdateTimer, SIGNAL(timeout()), &trodesInterface, SLOT(updateNetworkStatus()));
+    statusUpdateTimer.start(250);
+    interface_thread->start();
+
+
+    // Start StimInterface thread
     stim_thread->start();
 
 

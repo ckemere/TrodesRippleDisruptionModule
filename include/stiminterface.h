@@ -5,7 +5,8 @@
 #include <QUdpSocket>
 #include <QTimer>
 
-#define DEFAULT_STIM_SERVER_PORT 12345
+#define DEFAULT_STIM_SERVER_PORT 20782
+#define DEFAULT_STIM_SERVER_ADDRESS "192.168.0.1"
 
 
 class StimInterface : public QObject
@@ -24,6 +25,7 @@ public slots:
 
 signals:
     void stimStatusUpdate(StimIFaceStatus newStatus);
+    void stimServerUpdated(QString, quint16);
     void finished();
     void error(QString err);
 

@@ -76,6 +76,7 @@ void StimInterface::readPendingDatagrams()
     if (data[0] == 'A') {
         current_status = StimIFaceStatus::connected;
         emit stimStatusUpdate(current_status);
+        emit stimServerUpdated(server_address.toString(), server_port);
         stateMotivatorTimer->stop();
         stateMotivatorTimer->start(500);
     }
