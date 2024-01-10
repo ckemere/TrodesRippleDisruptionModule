@@ -34,13 +34,19 @@ void TableRow::setTableRow(QTableWidget *table, int row)
     table->setItem(row, 2, std);
 }
 
-void TableRow::highlight(bool highlight)
+void TableRow::highlight(TableRow::Highlight highlight)
 {
-    if (highlight) {
-        id->setBackground(QColor(0x95, 0xd0, 0xfc)); // XKCD light blue from https://xkcd.com/color/rgb
-    }
-    else {
-        id->setBackground(Qt::NoBrush);
+    switch (highlight) {
+        case TableRow::Highlight::RippleChannel:
+            id->setBackground(QColor(0x95, 0xd0, 0xfc)); // XKCD light blue from https://xkcd.com/color/rgb
+            break;
+        case TableRow::Highlight::NoiseChannel:
+            id->setBackground(QColor(0xff, 0xd1, 0xdf)); // XKCD light pink from https://xkcd.com/color/rgb
+            break;
+        case TableRow::Highlight::None:
+        default:
+            id->setBackground(Qt::NoBrush);
+            break;
     }
 }
 
@@ -260,9 +266,11 @@ void MainWindow::redrawNTrodeTable(QList<unsigned int> order)
         row->setTableRow(ui->tableWidget, i);
         // Colorize table
         if (rippleNTrodeIndices.contains(idx))
-            row->highlight(true);
+            row->highlight(TableRow::Highlight::RippleChannel);
+        else if (noiseNTrodeIndices.contains(idx))
+            row->highlight(TableRow::Highlight::NoiseChannel);
         else
-            row->highlight(false);
+            row->highlight(TableRow::Highlight::None);
     }
 }
 
@@ -271,14 +279,25 @@ void MainWindow::on_tableWidget_cellClicked(int row, int column)
     qDebug() << "Clicked a cell!";
     unsigned int nTrodeId_index = nTrodeTableRows[row]->id_index;
     if (column == 0) { // force click of ID cell
+        // Process scenarios where an electrode has already been selected and unhighlight
         if (rippleNTrodeIndices.contains(nTrodeId_index)) {
-            // unhighlight!
-            nTrodeTableRows[row]->highlight(false);
+            nTrodeTableRows[row]->highlight(TableRow::Highlight::None);
             rippleNTrodeIndices.removeOne(nTrodeId_index);
         }
+        else if (noiseNTrodeIndices.contains(nTrodeId_index)) {
+            nTrodeTableRows[row]->highlight(TableRow::Highlight::None);
+            noiseNTrodeIndices.removeOne(nTrodeId_index);
+        }
+        // Process scenarios where an electrode is being selected now and highlight appropriately
         else {
-            nTrodeTableRows[row]->highlight(true);
-            rippleNTrodeIndices.append(nTrodeId_index);
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                nTrodeTableRows[row]->highlight(TableRow::Highlight::NoiseChannel);
+                noiseNTrodeIndices.append(nTrodeId_index);
+            }
+            else {
+                nTrodeTableRows[row]->highlight(TableRow::Highlight::RippleChannel);
+                rippleNTrodeIndices.append(nTrodeId_index);
+            }
         }
     }
 }
@@ -313,6 +332,7 @@ void MainWindow::on_freezeSelectionButton_clicked()
             // Push selected channels to the top
             QList<unsigned int> new_order;
             new_order.append(rippleNTrodeIndices);
+            new_order.append(noiseNTrodeIndices);
 
             // Get unselected channels
             for (unsigned int i = 0; i < nTrodeIds.length(); i++) {

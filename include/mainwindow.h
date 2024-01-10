@@ -23,9 +23,13 @@ public:
     ~TableRow();
 
 public:
+    enum Highlight {None, RippleChannel, NoiseChannel};
+
+public:
     void setTableRow(QTableWidget *table, int row);
-    void highlight(bool highlight = true);
+    void highlight(Highlight highlight = None);
     void setParams(double m, double s) {mean_val = m; std_val = s; mean->setData(Qt::DisplayRole,m); std->setData(Qt::DisplayRole,s);}
+
 
     int id_val;
     double mean_val;

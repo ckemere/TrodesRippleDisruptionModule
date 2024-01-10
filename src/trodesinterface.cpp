@@ -58,7 +58,9 @@ unsigned int current_isi;
 std::atomic<double> recent_ripple_rate; // over last 30 s
 
 // Which channels of data are we using
-std::vector<unsigned int> ripple_channels;
+std::vector<unsigned int> signal_channels;
+// std::vector<unsigned int> rip_channels;
+// std::vector<unsigned int> rip_channels;
 std::atomic<bool> ripple_channels_changed;
 
 // Related to trainging mean and std-dev
@@ -66,7 +68,7 @@ std::mutex statistics_lock;
 bool currently_training;
 bool abort_training_flag;
 unsigned int training_duration; // in samples
-std::vector<double> means;
+std::vector<double> means; // entry for every channel, but only updates channels in use
 std::vector<double> vars;
 std::vector<double> std_devs;
 
@@ -88,7 +90,7 @@ void update_statistics(std::vector<double> new_data)
     
     // This is called inside a mutex, so it should be protected
     training_sample_count++;
-    for (auto ch : ripple_channels) {
+    for (auto ch : signal_channels) {
     // https://math.stackexchange.com/questions/374881/recursive-formula-for-variance
         old_mean_sq = means[ch]*means[ch];
         means[ch] = means[ch] + (new_data[ch] - means[ch]) / training_sample_count;
@@ -128,10 +130,10 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
             // recvd has     uint32_t localTimestamp; std::vector< int16_t > lfpData; int64_t systemTimestamp;
 
             if (ripple_channels_changed) { // this is atomic
-                std::cerr << "Ripple channels size " << ripple_channels.size() << std::endl;
-                ripple_power->reset(ripple_channels);
+                std::cerr << "Ripple channels size " << signal_channels.size() << std::endl;
+                ripple_power->reset(signal_channels);
                 statistics_lock.lock();
-                for (auto ch : ripple_channels) {
+                for (auto ch : signal_channels) {
                     means[ch] = 0;
                     vars[ch] = 0;
                 }
@@ -165,7 +167,7 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
                 double max_norm_power = -100;
                 unsigned int stimulation_vote = 0;
                 parameters_lock.lock(); // we're going to access the parameters in a second. protect with mutex
-                for (auto ch : ripple_channels) {
+                for (auto ch : signal_channels) {
                     norm_power = (ripple_power->output[ch] - means[ch])/std_devs[ch];
                     if (norm_power > ripple_threshold) {
                         stimulation_vote++;
@@ -397,9 +399,9 @@ void TrodesInterface::newRippleChannels(QList<unsigned int> rip_chans)
     // TODO - this needs to reshape the ripple structure in the other thread!
     // It won't necessarily be done until after streaming has started.
     statistics_lock.lock();
-    ripple_channels.resize(rip_chans.size());
+    signal_channels.resize(rip_chans.size());
     for (unsigned int i = 0; i < rip_chans.size(); i++)
-        ripple_channels[i] = rip_chans[i];
+        signal_channels[i] = rip_chans[i];
     ripple_channels_changed = true;
     statistics_lock.unlock();
 }
