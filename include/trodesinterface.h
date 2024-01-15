@@ -31,7 +31,7 @@ public:
 public slots:
     void updateParameters(RippleParameters);
     void updateNetworkStatus();
-    void newRippleChannels(QList<unsigned int>);
+    void newRippleChannels(QList<unsigned int>, QList<unsigned int>);
     void run(void);
     
     void startTraining(unsigned int numberOfTrainingSamples);

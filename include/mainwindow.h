@@ -75,7 +75,7 @@ signals:
     void updatedStimServerUrl(QString, quint16);
     void testStimulation();
     void appClosing();
-    void newRippleChannels(QList<unsigned int>);
+    void newRippleChannels(QList<unsigned int>, QList<unsigned int>);
     void startTraining(unsigned int);
     void newParameters(RippleParameters);
     void enableStimulation(bool);

@@ -41,6 +41,7 @@ std::atomic<TrodesInterface::TrodesNetworkStatus> trodesNetworkStatus = TrodesIn
 // Ripple detetection parameters
 std::mutex parameters_lock;
 double ripple_threshold = 3.0;
+double noise_threshold = 0.0;
 unsigned int num_active_channels = 1;
 double minimum_stim_isi;
 double minimum_stim_average_isi;
@@ -59,8 +60,8 @@ std::atomic<double> recent_ripple_rate; // over last 30 s
 
 // Which channels of data are we using
 std::vector<unsigned int> signal_channels;
-// std::vector<unsigned int> rip_channels;
-// std::vector<unsigned int> rip_channels;
+std::vector<unsigned int> rip_channels;
+std::vector<unsigned int> noise_channels;
 std::atomic<bool> ripple_channels_changed;
 
 // Related to trainging mean and std-dev
@@ -163,19 +164,33 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
             if (stimulation_enabled) {
                 current_isi++; // incremement time since last stimulation
 
-                double norm_power;
-                double max_norm_power = -100;
-                unsigned int stimulation_vote = 0;
+                unsigned int ripple_vote = 0;
+                double max_norm_ripple_power = -100; // Use for rejecting too large of ripples. Maybe redundant with noise channel detection
+                double total_norm_noise_power = 0;
+
                 parameters_lock.lock(); // we're going to access the parameters in a second. protect with mutex
-                for (auto ch : signal_channels) {
-                    norm_power = (ripple_power->output[ch] - means[ch])/std_devs[ch];
+
+                // Z-score ripple channels and check for threshold crossing. Increment vote and max power if so
+                for (auto ch : rip_channels) {
+                    double norm_power = (ripple_power->output[ch] - means[ch])/std_devs[ch]; // z-score
                     if (norm_power > ripple_threshold) {
-                        stimulation_vote++;
-                        max_norm_power = std::max(max_norm_power, norm_power);
+                        ripple_vote++;
+                        max_norm_ripple_power = std::max(max_norm_ripple_power, norm_power);
                     }
                 }
 
-                if ((stimulation_vote >= num_active_channels) && // Did vote succeed?
+                // Z-score noise channels and check for threshold crossing
+                bool noise_vote = false;
+                if (noise_channels.size() > 0) {
+                    for (auto ch : noise_channels) {
+                        total_norm_noise_power += (ripple_power->output[ch] - means[ch])/std_devs[ch];  // z-score
+                    }
+
+                    noise_vote = (total_norm_noise_power / noise_channels.size()) > noise_threshold;
+                }
+
+                if ((!noise_vote) &&
+                    (ripple_vote >= num_active_channels) && // Did vote succeed?
                     (current_isi > minimum_stim_isi) && // Are we more than our minimum inter-stim difference?
                     ((current_isi + isi_sum) / 9 > minimum_stim_average_isi)) {// Are we going to make our average stim rate too high?
 
@@ -184,13 +199,13 @@ void network_processing_loop (std::thread *trodes_network, std::string lfp_pub_e
                         sendto(sockfd, regular_stim_cmd, strlen(regular_stim_cmd), 0, (const struct sockaddr *)&stimserver_addr, sizeof(stimserver_addr));
                         // TODO - verify response?
                         
-                        std::cerr << "STIMULATE " << max_norm_power << std::endl;
+                        std::cerr << "STIMULATE " << max_norm_ripple_power << std::endl;
 
                     }
                     else {
                         sendto(sockfd, delay_stim_cmd, strlen(delay_stim_cmd), 0, (const struct sockaddr *)&stimserver_addr, sizeof(stimserver_addr));
                         // TODO - verify response?
-                        std::cerr << "CONTROL STIMULATE " << max_norm_power << std::endl;
+                        std::cerr << "CONTROL STIMULATE " << max_norm_ripple_power << std::endl;
                     }
 
                     isi_sum = isi_sum - inter_stim_intervals[isi_idx];
@@ -362,11 +377,13 @@ void TrodesInterface::updateParameters(RippleParameters new_params)
     minimum_stim_isi = new_params.minimum_stim_isi;
     minimum_stim_average_isi = new_params.minimum_stim_average_isi;
     post_detection_delay = new_params.post_detection_delay;
+    noise_threshold = new_params.noise_threshold;
     parameters_lock.unlock();
     qDebug() << "Got new params! " << new_params.ripple_threshold << " " 
                                 << new_params.num_active_channels << " " 
                                 << new_params.minimum_stim_isi << " " 
-                                << new_params.minimum_stim_average_isi;
+                                << new_params.minimum_stim_average_isi << " "
+                                << new_params.noise_threshold;
     emit parametersUpdated();
 }
 
@@ -394,14 +411,31 @@ void TrodesInterface::updateNetworkStatus()
     emit networkStatus(currentNetworkStatus);
 }
 
-void TrodesInterface::newRippleChannels(QList<unsigned int> rip_chans)
+void TrodesInterface::newRippleChannels(QList<unsigned int> rip_chans, QList<unsigned int> noise_chans)
 {
     // TODO - this needs to reshape the ripple structure in the other thread!
     // It won't necessarily be done until after streaming has started.
+    qDebug() << rip_chans.size() << " " << noise_chans.size();
     statistics_lock.lock();
-    signal_channels.resize(rip_chans.size());
-    for (unsigned int i = 0; i < rip_chans.size(); i++)
-        signal_channels[i] = rip_chans[i];
+    signal_channels.resize(rip_chans.size() + noise_chans.size());
+    rip_channels.resize(rip_chans.size());
+    noise_channels.resize(noise_chans.size());
+    int k = 0;
+
+    qDebug() << rip_channels.size() << " " << noise_channels.size();
+
+    for (unsigned int i = 0; i < rip_chans.size(); i++) {
+        signal_channels[k++] = rip_chans[i];
+        rip_channels[i] = rip_chans[i];
+    }
+
+    qDebug() << rip_channels.size() << " " << noise_channels.size();
+
+
+    for (unsigned int i = 0; i < noise_chans.size(); i++) {
+        signal_channels[k++] = noise_chans[i];
+        noise_channels[i] = noise_chans[i];
+    }
     ripple_channels_changed = true;
     statistics_lock.unlock();
 }

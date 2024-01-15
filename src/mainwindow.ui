@@ -30,12 +30,17 @@
               <bool>true</bool>
             </property>
             <property name="text">
-             <string>Click to select ripple channels.\nCtrl-click to select noise channels.\nSelect Freeze when done.</string>
+             <string>Click ripple channels; Ctrl-click noise.</string>
             </property>
           </widget>
           </item>
           <item row="1" column="0" colspan="2">
            <widget class="QTableWidget" name="tableWidget">
+            <property name="toolTip">
+              <string>Click to select ripple detection channels.
+Ctrl-click to select noise channels (optional).
+[Freeze Selection] when done.</string>
+            </property>
             <property name="rowCount">
              <number>1</number>
             </property>
@@ -173,6 +178,9 @@
           </item>
           <item row="0" column="1">
            <widget class="QDoubleSpinBox" name="rippleThreshold">
+            <property name="minimum">
+             <double>0.0</double>
+            </property>
             <property name="maximum">
              <double>100000.0</double>
             </property>
@@ -252,6 +260,7 @@
           <string>False Positive Detection Parameters</string>
          </property>
          <layout class="QFormLayout">
+         <!--
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox">
             <property name="text">
@@ -269,32 +278,27 @@
           <item row="1" column="1">
            <widget class="QDoubleSpinBox" name="doubleSpinBox_2"/>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_2">
-            <property name="text">
-             <string>Enable Noise Channels</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
+            -->
+
+          <item row="0" column="0">
            <widget class="QLabel" name="label_4">
+            <property name="toolTip">
+             <string>Set the z-score threshold for the noise-channel ripple channels. 
+             Set to 0 if no false positive desired.</string>
+            </property>
             <property name="text">
-             <string>[Noise] Ripple Band Threshold</string>
+             <string>Noise Threshold</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="noiseThreshold"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>[Noise] Num. Active Channels</string>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="noiseThreshold">
+            <property name="minimum">
+             <double>0.0</double>
             </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QSpinBox" name="noiseActiveChannels">
+            <property name="maximum">
+             <double>100000.0</double>
+            </property>
            </widget>
           </item>
          </layout>

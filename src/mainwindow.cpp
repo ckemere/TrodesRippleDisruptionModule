@@ -57,7 +57,6 @@ MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
     , currentlyTraining(false), currentlyStimulating(false)
 {
     ui->setupUi(this);
-    ui->rejectionParamsGroupBox->setEnabled(false);
 
     redrawNTrodeTable();
 
@@ -72,12 +71,17 @@ MainWindow::MainWindow(QWidget *parent, QList<int> nTrodeIds)
 
     ui->rippleParamGroupBox->setEnabled(false);
     ui->stimParamsGroupBox->setEnabled(false);
+    ui->rejectionParamsGroupBox->setEnabled(false);
+
 
     ui->rippleThreshold->setValue(DEFAULT_RIPPLE_THRESHOLD);
     ui->numActiveChannels->setValue(DEFAULT_NUM_ACTIVE_CHANNELS);
     ui->minInterStim->setValue(DEFAULT_MINIMUM_STIM_ISI);
     ui->maxStimRate->setValue(DEFAULT_MAXIMUM_STIM_RATE);
-    
+
+    ui->noiseThreshold->setValue(DEFAULT_NOISE_THRESHOLD);
+
+
     ui->statusbar->showMessage("Establishing Trodes interface.");
 
     ui->raspberryPiLineEdit->setText(QString("udp://%1:%2").arg(DEFAULT_STIM_SERVER_ADDRESS, QString::number(DEFAULT_STIM_SERVER_PORT)));
@@ -179,6 +183,8 @@ void MainWindow::networkStatusUpdate(TrodesInterface::TrodesNetworkStatus status
             if (trodesNetworkStatus != TrodesInterface::TrodesNetworkStatus::streaming) {
                 ui->rippleParamGroupBox->setEnabled(true);
                 ui->stimParamsGroupBox->setEnabled(true);
+                ui->rejectionParamsGroupBox->setEnabled(true);
+
                 // Send updated parameters
                 on_updateParametersButton_clicked();
             }            
@@ -210,6 +216,8 @@ void MainWindow::on_controlStimulationCheckBox_stateChanged(int state) {
 
 void MainWindow::newParametersNotUpdated(void) {
     ui->rippleParamGroupBox->setStyleSheet("background-color: pink");
+    ui->rejectionParamsGroupBox->setStyleSheet("background-color: pink");
+    
     ui->updateParametersButton->setEnabled(true);
 }
 
@@ -229,11 +237,13 @@ void MainWindow::on_updateParametersButton_clicked()
                                   (unsigned int)  ui->numActiveChannels->value(), 
                                   (unsigned int) (ui->minInterStim->value() * SAMPLES_PER_SECOND / 1000), // convert to samples from ms
                                   (unsigned int) (1 / ui->maxStimRate->value() * SAMPLES_PER_SECOND), // convert to samples from rate
-                                  ui->controlStimulationCheckBox->checkState() == Qt::Checked};
+                                  ui->controlStimulationCheckBox->checkState() == Qt::Checked,
+                                  ui->noiseThreshold->value()};
     emit newParameters(newParams);
     qDebug() << "Update parameters clicked! From thread " << QThread::currentThreadId();
     ui->updateParametersButton->setEnabled(false);
     ui->rippleParamGroupBox->setStyleSheet("");
+    ui->rejectionParamsGroupBox->setStyleSheet("");   
 }
 
 void MainWindow::reflectParametersUpdated()
@@ -345,7 +355,7 @@ void MainWindow::on_freezeSelectionButton_clicked()
             ui->freezeSelectionButton->setText("Unfreeze Selection");
             nTrodeTableFrozen = true;
 
-            emit newRippleChannels(rippleNTrodeIndices);
+            emit newRippleChannels(rippleNTrodeIndices, noiseNTrodeIndices);
 
             ui->trainingDurationSpinBox->setEnabled(true);
             ui->trainingDurationLabel->setEnabled(true);
